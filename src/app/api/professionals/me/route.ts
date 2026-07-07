@@ -24,7 +24,7 @@ export async function GET() {
       professionalId: profile.id,
       status: { in: ['PENDING', 'CONFIRMED'] },
       ...(profile.lastBookingsViewedAt ? { createdAt: { gt: profile.lastBookingsViewedAt } } : {}),
-    } as const;
+    };
 
     const [newBookingsCount, newBookings] = await Promise.all([
       prisma.booking.count({ where: newBookingsWhere }),

@@ -1,0 +1,50 @@
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
+import { requireRole } from '@/lib/session';
+
+// GET /api/admin/professionals -> every professional profile, for the admin review queue
+export async function GET() {
+  try {
+    await requireRole('ADMIN');
+
+    const professionals = await prisma.professionalProfile.findMany({
+      include: {
+        user: { select: { id: true, name: true, email: true, isActive: true, createdAt: true } },
+        services: { select: { id: true } },
+      },
+      orderBy: [{ isApproved: 'asc' }, { createdAt: 'desc' }],
+    });
+
+    return NextResponse.json(professionals);
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message ?? 'Error' }, { status: e.status ?? 500 });
+  }
+}
+
+const approveSchema = z.object({
+  professionalProfileId: z.string(),
+  isApproved: z.boolean(),
+});
+
+// PATCH /api/admin/professionals -> approve or revoke a professional's public visibility
+export async function PATCH(req: Request) {
+  try {
+    await requireRole('ADMIN');
+
+    const body = await req.json();
+    const parsed = approveSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message }, { status: 400 });
+    }
+
+    const updated = await prisma.professionalProfile.update({
+      where: { id: parsed.data.professionalProfileId },
+      data: { isApproved: parsed.data.isApproved },
+    });
+
+    return NextResponse.json({ id: updated.id, isApproved: updated.isApproved });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message ?? 'Error' }, { status: e.status ?? 500 });
+  }
+}

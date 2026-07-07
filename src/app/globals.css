@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-fraunces: 'Cormorant Garamond', serif;
+  --font-inter: 'Inter', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+* {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #FAF7F1;
+  color: #2B2723;
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-md bg-moss-500 px-7 py-3.5 text-sm font-medium tracking-wide text-white transition-colors hover:bg-moss-600 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-md border border-[#2B272333] bg-transparent px-7 py-3.5 text-sm font-medium tracking-wide text-ink transition-colors hover:border-[#2B272366] hover:bg-[#2B27230A] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .card {
+    @apply rounded-xl border border-[#2B272314] bg-white shadow-sm;
+  }
+
+  .input {
+    @apply w-full rounded-md border border-[#2B272326] bg-white px-4 py-2.5 text-sm text-ink placeholder:text-[#2B272366] focus:border-moss-500 focus:outline-none focus:ring-1 focus:ring-moss-300;
+  }
+
+  .label {
+    @apply mb-1.5 block text-xs font-medium uppercase tracking-[0.08em] text-stone;
+  }
+}
+
+/* Respect reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

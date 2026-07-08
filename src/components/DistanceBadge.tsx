@@ -15,6 +15,11 @@ export default function DistanceBadge({ latitude, longitude }: { latitude: numbe
     if (latitude == null || longitude == null) return;
     if (!('geolocation' in navigator)) return;
 
+    // Captured as plain consts so the nested closures below keep the non-null typing
+    // (TypeScript's strict build doesn't carry the null-check narrowing into callbacks).
+    const proLatitude = latitude;
+    const proLongitude = longitude;
+
     let cancelled = false;
 
     async function trySilentLocation() {
@@ -30,7 +35,7 @@ export default function DistanceBadge({ latitude, longitude }: { latitude: numbe
             setDistance(
               distanceKm(
                 { latitude: pos.coords.latitude, longitude: pos.coords.longitude },
-                { latitude, longitude }
+                { latitude: proLatitude, longitude: proLongitude }
               )
             );
           },

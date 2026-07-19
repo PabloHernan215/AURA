@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Avatar from '@/components/Avatar';
+import BookingsByStatusChart from '@/components/admin/BookingsByStatusChart';
 
 interface UserItem {
   id: string;
@@ -158,12 +159,12 @@ export default function AdminDashboardPage() {
     <div className="mx-auto max-w-5xl px-5 py-10">
       <h1 className="font-display text-2xl font-semibold text-ink">Panel de administración</h1>
 
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
         {(['pending', 'metrics', 'users', 'bookings', 'settings'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
               tab === t ? 'bg-ink text-white' : 'bg-sand text-ink/70 hover:bg-ink/10'
             }`}
           >
@@ -258,19 +259,22 @@ export default function AdminDashboardPage() {
           )}
 
           {tab === 'metrics' && metrics && (
-            <div className="grid gap-4 sm:grid-cols-3">
-              {[
-                { label: 'Usuarios totales', value: metrics.totalUsers },
-                { label: 'Profesionales', value: metrics.totalProfessionals },
-                { label: 'Reservas totales', value: metrics.totalBookings },
-                { label: 'Citas completadas', value: metrics.completedBookings },
-                { label: 'Ingresos (completadas)', value: `$${metrics.totalRevenue.toFixed(2)}` },
-              ].map((m) => (
-                <div key={m.label} className="card p-5">
-                  <p className="label">{m.label}</p>
-                  <p className="mt-1 font-display text-3xl font-semibold text-ink">{m.value}</p>
-                </div>
-              ))}
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-3">
+                {[
+                  { label: 'Usuarios totales', value: metrics.totalUsers },
+                  { label: 'Profesionales', value: metrics.totalProfessionals },
+                  { label: 'Reservas totales', value: metrics.totalBookings },
+                  { label: 'Citas completadas', value: metrics.completedBookings },
+                  { label: 'Ingresos (completadas)', value: `$${metrics.totalRevenue.toFixed(2)}` },
+                ].map((m) => (
+                  <div key={m.label} className="card p-5">
+                    <p className="label">{m.label}</p>
+                    <p className="mt-1 font-display text-3xl font-semibold text-ink">{m.value}</p>
+                  </div>
+                ))}
+              </div>
+              <BookingsByStatusChart bookings={bookings} />
             </div>
           )}
 

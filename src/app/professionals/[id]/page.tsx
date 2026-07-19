@@ -1,9 +1,30 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import StarRating from '@/components/StarRating';
 import Avatar from '@/components/Avatar';
 import ServiceCard from '@/components/ServiceCard';
 import DistanceBadge from '@/components/DistanceBadge';
+import { SITE_URL } from '@/lib/site';
+
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const professional = await getProfessional(params.id);
+  if (!professional) return {};
+
+  const tags = professional.specialties.split(',').map((s) => s.trim()).filter(Boolean);
+  const title = tags.length ? `${professional.user.name} — ${tags.join(', ')}` : professional.user.name;
+  const description = professional.bio
+    ? professional.bio.slice(0, 155)
+    : `Reserva una cita con ${professional.user.name} en AURA. ${tags.join(', ')}.`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `${SITE_URL}/professionals/${professional.id}` },
+    openGraph: { title, description, url: `${SITE_URL}/professionals/${professional.id}`, type: 'profile' },
+    twitter: { card: 'summary_large_image', title, description },
+  };
+}
 
 async function getProfessional(id: string) {
   const professional = await prisma.professionalProfile.findUnique({
@@ -31,8 +52,37 @@ export default async function ProfessionalProfilePage({ params }: { params: { id
   const tags = professional.specialties.split(',').map((s) => s.trim()).filter(Boolean);
   const reviews = professional.bookings.filter((b) => b.review);
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BeautySalon',
+    name: professional.user.name,
+    url: `${SITE_URL}/professionals/${professional.id}`,
+    ...(professional.photoUrl ? { image: professional.photoUrl } : {}),
+    ...(professional.location ? { address: professional.location } : {}),
+    ...(professional.ratingCount > 0
+      ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: professional.ratingAvg,
+            reviewCount: professional.ratingCount,
+          },
+        }
+      : {}),
+    makesOffer: professional.services.map((s) => ({
+      '@type': 'Offer',
+      itemOffered: { '@type': 'Service', name: s.name, description: s.description || undefined },
+      price: s.price,
+      priceCurrency: 'USD',
+    })),
+  };
+
   return (
     <div className="mx-auto max-w-4xl px-5 py-10">
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
+      />
       <div className="card overflow-hidden">
         <div className="h-28 bg-gradient-to-br from-moss-100 to-clay-100" />
         <div className="px-6 pb-6">

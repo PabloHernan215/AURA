@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { Skeleton } from '@/components/Skeleton';
 
 interface BookingSlotPickerProps {
   professionalId: string;
@@ -73,7 +74,7 @@ export default function BookingSlotPicker({
             <button
               key={day.toISOString()}
               onClick={() => setActiveDay(day)}
-              className={`flex min-w-[64px] flex-col items-center rounded-xl px-3 py-2 text-sm transition-colors ${
+              className={`flex min-w-[64px] flex-col items-center rounded-xl px-3 py-2 text-sm transition-all duration-150 active:scale-95 ${
                 isActive ? 'bg-ink text-white' : 'bg-sand text-ink/70 hover:bg-ink/10'
               }`}
             >
@@ -88,7 +89,11 @@ export default function BookingSlotPicker({
 
       <div className="mt-4">
         {loading ? (
-          <p className="text-sm text-ink/50">Cargando horarios disponibles…</p>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-[38px] w-full rounded-xl" />
+            ))}
+          </div>
         ) : error ? (
           <p className="text-sm text-moss-600">{error}</p>
         ) : slots.length === 0 ? (
@@ -107,10 +112,10 @@ export default function BookingSlotPicker({
                 <button
                   key={slot.start}
                   onClick={() => onSelectSlot(slot.start)}
-                  className={`rounded-xl border px-3 py-2 text-sm font-medium transition-colors ${
+                  className={`rounded-xl border px-3 py-2 text-sm font-medium transition-all duration-150 active:scale-95 ${
                     isSelected
-                      ? 'border-moss-500 bg-moss-500 text-white'
-                      : 'border-ink/10 bg-white text-ink hover:border-moss-300'
+                      ? 'border-moss-500 bg-moss-500 text-white shadow-sm'
+                      : 'border-ink/10 bg-white text-ink hover:border-moss-300 hover:shadow-sm'
                   }`}
                 >
                   {time}

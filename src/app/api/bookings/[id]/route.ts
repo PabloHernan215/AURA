@@ -13,15 +13,16 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
     const booking = await prisma.booking.findUnique({
       where: { id: params.id },
-      include: { professional: true },
+      include: { professional: true, business: true },
     });
     if (!booking) return NextResponse.json({ error: 'Reserva no encontrada' }, { status: 404 });
 
     const isClientOwner = booking.clientId === user.id;
     const isProfessionalOwner = booking.professional.userId === user.id;
+    const isBusinessOwner = booking.business.ownerId === user.id;
     const isAdmin = user.role === 'ADMIN';
 
-    if (!isClientOwner && !isProfessionalOwner && !isAdmin) {
+    if (!isClientOwner && !isProfessionalOwner && !isBusinessOwner && !isAdmin) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
 
@@ -34,12 +35,12 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const { status } = parsed.data;
 
     // Business rules on who can set what
-    if (status === 'CANCELLED' && !(isClientOwner || isProfessionalOwner || isAdmin)) {
+    if (status === 'CANCELLED' && !(isClientOwner || isProfessionalOwner || isBusinessOwner || isAdmin)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
-    // Clients must cancel at least 2 hours ahead of the appointment. Professionals and
-    // admins keep full flexibility to cancel any time, since they manage the schedule.
-    if (status === 'CANCELLED' && isClientOwner && !isProfessionalOwner && !isAdmin) {
+    // Clients must cancel at least 2 hours ahead of the appointment. Professionals,
+    // business owners, and admins keep full flexibility, since they manage the schedule.
+    if (status === 'CANCELLED' && isClientOwner && !isProfessionalOwner && !isBusinessOwner && !isAdmin) {
       const hoursUntilAppointment = (booking.datetime.getTime() - Date.now()) / (1000 * 60 * 60);
       if (hoursUntilAppointment < 2) {
         return NextResponse.json(
@@ -48,8 +49,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
         );
       }
     }
-    if (status === 'COMPLETED' && !(isProfessionalOwner || isAdmin)) {
-      return NextResponse.json({ error: 'Solo el profesional puede marcar una reserva como completada' }, { status: 403 });
+    if (status === 'COMPLETED' && !(isProfessionalOwner || isBusinessOwner || isAdmin)) {
+      return NextResponse.json({ error: 'Solo el profesional o el local pueden marcar una reserva como completada' }, { status: 403 });
     }
     if (booking.status === 'CANCELLED' || booking.status === 'COMPLETED') {
       return NextResponse.json({ error: 'Esta reserva ya no puede modificarse' }, { status: 400 });

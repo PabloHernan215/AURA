@@ -1,5 +1,12 @@
-// AURA Studio — Database Schema
+// AURA — Database Schema
 // Uses PostgreSQL (works both locally and in production — see README for setup).
+//
+// ARCHITECTURE NOTE (migration to venue-centric model):
+// The platform is now organized around Business ("Local") as the primary browsable
+// entity — like Fresha — instead of individual professionals. A Business has a real
+// address and its own approval flow; professionals join an already-approved Business
+// instead of registering their own separate location. Clients browse/search Businesses
+// first, then pick a professional and service within that business.
 
 generator client {
   provider = "prisma-client-js"
@@ -12,40 +19,65 @@ datasource db {
 
 // NOTE: Role and BookingStatus are plain String columns (not native Prisma enums),
 // constrained at the application layer to fixed values — see src/types/models.ts.
-// This was originally to support SQLite in early development; kept as-is since it
-// works identically on PostgreSQL and avoids an extra migration.
 
 model User {
   id        String   @id @default(cuid())
   name      String
   email     String   @unique
   password  String
-  role      String   @default("CLIENT") // "CLIENT" | "PROFESSIONAL" | "ADMIN"
+  role      String   @default("CLIENT") // "CLIENT" | "PROFESSIONAL" | "BUSINESS_OWNER" | "ADMIN"
   whatsapp  String   @default("") // used to send booking confirmations via WhatsApp
-  isActive  Boolean  @default(true) // admin can disable a professional/user
+  isActive  Boolean  @default(true) // admin can disable any user
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   professionalProfile ProfessionalProfile?
+  ownedBusiness       Business?            @relation("BusinessOwner")
   bookingsAsClient    Booking[]            @relation("ClientBookings")
 
   @@map("users")
 }
 
-model ProfessionalProfile {
+// A physical venue ("Local") — salon, barbershop, spa. This is the primary entity
+// clients browse and search. Admin approves each Business once; after that, its
+// owner can freely add professionals without per-professional admin review.
+model Business {
   id           String  @id @default(cuid())
-  userId       String  @unique
-  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bio          String  @default("")
-  specialties  String  @default("") // comma-separated for MVP simplicity, e.g. "Hair,Nails"
+  ownerId      String  @unique
+  owner        User    @relation("BusinessOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  name         String
+  description  String  @default("")
   location     String?
   latitude     Float?  // auto-filled by geocoding `location` text, used to show real distance to clients
   longitude    Float?
-  whatsapp     String  @default("") // phone number for WhatsApp contact, collected at signup
+  whatsapp     String  @default("") // business contact number, never shown publicly (see /docs on booking flow)
   photoUrl     String?
   ratingAvg    Float   @default(0)
   ratingCount  Int     @default(0)
-  isApproved   Boolean @default(false) // admin must approve before the professional appears publicly or can receive bookings
+  isApproved   Boolean @default(false) // admin must approve before the business appears publicly or can receive bookings
+  lastBookingsViewedAt DateTime? // used to compute how many bookings are "new" for the owner's dashboard
+
+  professionals ProfessionalProfile[]
+  bookings      Booking[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("businesses")
+}
+
+model ProfessionalProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessId   String
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  bio          String   @default("")
+  specialties  String   @default("") // comma-separated for MVP simplicity, e.g. "Cabello,Uñas"
+  whatsapp     String   @default("") // personal contact number, used for the professional's own WhatsApp notification
+  photoUrl     String?
+  ratingAvg    Float    @default(0)
+  ratingCount  Int      @default(0)
   lastBookingsViewedAt DateTime? // used to compute how many bookings are "new" since the professional last checked
 
   services      Service[]
@@ -95,6 +127,8 @@ model Booking {
   id             String        @id @default(cuid())
   clientId       String
   client         User          @relation("ClientBookings", fields: [clientId], references: [id])
+  businessId     String        // denormalized for fast "all bookings for my venue" queries
+  business       Business      @relation(fields: [businessId], references: [id])
   professionalId String
   professional   ProfessionalProfile @relation("ProfessionalBookings", fields: [professionalId], references: [id])
   serviceId      String
@@ -115,6 +149,7 @@ model Booking {
   @@unique([professionalId, datetime], name: "professional_datetime_unique")
   @@index([clientId])
   @@index([professionalId, datetime])
+  @@index([businessId])
   @@map("bookings")
 }
 
@@ -130,7 +165,7 @@ model Review {
 }
 
 // Single-row table (id is always "settings") holding platform-wide, admin-editable text
-// shown in booking confirmation messages, since AURA Studio doesn't process payments in v1.
+// shown in booking confirmation messages, since AURA doesn't process payments in v1.
 model PlatformSettings {
   id             String   @id @default("settings")
   paymentMethods String   @default("Efectivo, transferencia bancaria o tarjeta directamente en el estudio.")

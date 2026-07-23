@@ -18,7 +18,8 @@ interface ProfessionalInfo {
   id: string;
   name: string;
   photoUrl: string | null;
-  location: string | null;
+  businessName: string;
+  businessLocation: string | null;
 }
 
 export default function BookingPage({
@@ -46,7 +47,8 @@ export default function BookingPage({
           id: params.professionalId,
           name: data.name,
           photoUrl: data.photoUrl ?? null,
-          location: data.location ?? null,
+          businessName: data.business?.name ?? '',
+          businessLocation: data.business?.location ?? null,
         });
         const svc = data.services.find((s: ServiceInfo) => s.id === params.serviceId);
         setService(svc ?? null);
@@ -141,9 +143,9 @@ export default function BookingPage({
               minute: '2-digit',
             })}
           </p>
-          {professional.location && (
+          {professional.businessLocation && (
             <p className="text-ink/70">
-              <span className="font-semibold text-ink">📍 Dirección:</span> {professional.location}
+              <span className="font-semibold text-ink">📍 Dirección:</span> {professional.businessLocation}
             </p>
           )}
           {paymentMethods && (
@@ -157,7 +159,7 @@ export default function BookingPage({
           Tu profesional ya puede ver esta reserva y contactarte para coordinar cualquier detalle.
         </p>
 
-        <Link href="/professionals" className="btn-primary mt-6 inline-flex">
+        <Link href="/locales" className="btn-primary mt-6 inline-flex">
           Reservar otra
         </Link>
       </div>
@@ -179,7 +181,7 @@ export default function BookingPage({
         <div>
           <div className="flex items-center gap-2">
             <Avatar name={professional.name} photoUrl={professional.photoUrl} size="sm" />
-            <p className="text-sm text-ink/60">con {professional.name}</p>
+            <p className="text-sm text-ink/60">con {professional.name} · {professional.businessName}</p>
           </div>
           <p className="mt-1 text-sm text-ink/60">
             {service.duration} min · ${service.price}
@@ -209,9 +211,9 @@ export default function BookingPage({
       </div>
 
       <div className="card mt-4 space-y-2 p-5 text-sm">
-        {professional.location && (
+        {professional.businessLocation && (
           <p className="text-ink/70">
-            <span className="font-semibold text-ink">📍 Dirección:</span> {professional.location}
+            <span className="font-semibold text-ink">📍 Dirección:</span> {professional.businessLocation}
           </p>
         )}
         {paymentMethods && (

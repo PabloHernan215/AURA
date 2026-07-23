@@ -4,15 +4,15 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Avatar from '@/components/Avatar';
-import BookingsByStatusChart from '@/components/admin/BookingsByStatusChart';
 
 interface UserItem {
   id: string;
   name: string;
   email: string;
-  role: 'CLIENT' | 'PROFESSIONAL' | 'ADMIN';
+  role: 'CLIENT' | 'PROFESSIONAL' | 'BUSINESS_OWNER' | 'ADMIN';
   isActive: boolean;
   professionalProfile: { photoUrl: string | null; ratingAvg: number; ratingCount: number } | null;
+  ownedBusiness: { id: string; name: string; isApproved: boolean } | null;
 }
 
 interface AdminBooking {
@@ -22,22 +22,25 @@ interface AdminBooking {
   isNew: boolean;
   client: { name: string };
   professional: { user: { name: string } };
+  business: { name: string };
   service: { name: string; price: number };
 }
 
-interface AdminProfessional {
+interface AdminBusiness {
   id: string;
-  bio: string;
-  specialties: string;
+  name: string;
+  description: string;
+  location: string | null;
+  photoUrl: string | null;
   isApproved: boolean;
   createdAt: string;
-  photoUrl: string | null;
-  user: { name: string; email: string; isActive: boolean };
-  services: { id: string }[];
+  owner: { name: string; email: string; isActive: boolean };
+  professionals: { id: string }[];
 }
 
 interface Metrics {
   totalUsers: number;
+  totalBusinesses: number;
   totalProfessionals: number;
   totalBookings: number;
   completedBookings: number;
@@ -47,6 +50,7 @@ interface Metrics {
 const ROLE_LABELS: Record<string, string> = {
   CLIENT: 'Cliente',
   PROFESSIONAL: 'Profesional',
+  BUSINESS_OWNER: 'Dueño de local',
   ADMIN: 'Admin',
 };
 
@@ -69,7 +73,7 @@ export default function AdminDashboardPage() {
   const { data: session, status } = useSession();
   const [tab, setTab] = useState<'pending' | 'metrics' | 'users' | 'bookings' | 'settings'>('pending');
   const [users, setUsers] = useState<UserItem[]>([]);
-  const [professionals, setProfessionals] = useState<AdminProfessional[]>([]);
+  const [businesses, setBusinesses] = useState<AdminBusiness[]>([]);
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
   const [newBookingsCount, setNewBookingsCount] = useState(0);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -83,15 +87,15 @@ export default function AdminDashboardPage() {
     Promise.all([
       fetch('/api/admin/users').then((r) => r.json()),
       fetch('/api/admin/bookings').then((r) => r.json()),
-      fetch('/api/admin/professionals').then((r) => r.json()),
+      fetch('/api/admin/businesses').then((r) => r.json()),
       fetch('/api/admin/settings').then((r) => r.json()),
     ])
-      .then(([usersData, bookingsData, professionalsData, settingsData]) => {
+      .then(([usersData, bookingsData, businessesData, settingsData]) => {
         setUsers(usersData);
         setBookings(bookingsData.bookings ?? []);
         setNewBookingsCount(bookingsData.newBookingsCount ?? 0);
         setMetrics(bookingsData.metrics ?? null);
-        setProfessionals(professionalsData);
+        setBusinesses(businessesData);
         setPaymentMethods(settingsData.paymentMethods ?? '');
       })
       .finally(() => setLoading(false));
@@ -118,11 +122,11 @@ export default function AdminDashboardPage() {
     load();
   }
 
-  async function setApproval(professionalProfileId: string, isApproved: boolean) {
-    await fetch('/api/admin/professionals', {
+  async function setApproval(businessId: string, isApproved: boolean) {
+    await fetch('/api/admin/businesses', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ professionalProfileId, isApproved }),
+      body: JSON.stringify({ businessId, isApproved }),
     });
     load();
   }
@@ -152,26 +156,26 @@ export default function AdminDashboardPage() {
     );
   }
 
-  const pendingProfessionals = professionals.filter((p) => !p.isApproved);
-  const approvedProfessionals = professionals.filter((p) => p.isApproved);
+  const pendingBusinesses = businesses.filter((b) => !b.isApproved);
+  const approvedBusinesses = businesses.filter((b) => b.isApproved);
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-10">
       <h1 className="font-display text-2xl font-semibold text-ink">Panel de administración</h1>
 
-      <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+      <div className="mt-4 flex gap-2">
         {(['pending', 'metrics', 'users', 'bookings', 'settings'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
+            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
               tab === t ? 'bg-ink text-white' : 'bg-sand text-ink/70 hover:bg-ink/10'
             }`}
           >
             {TAB_LABELS[t]}
-            {t === 'pending' && pendingProfessionals.length > 0 && (
+            {t === 'pending' && pendingBusinesses.length > 0 && (
               <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-moss-500 px-1 text-xs font-semibold text-white">
-                {pendingProfessionals.length}
+                {pendingBusinesses.length}
               </span>
             )}
             {t === 'bookings' && newBookingsCount > 0 && (
@@ -191,36 +195,36 @@ export default function AdminDashboardPage() {
             <div className="space-y-6">
               <div>
                 <h2 className="font-display text-lg font-semibold text-ink">
-                  Pendientes de aprobación {pendingProfessionals.length > 0 && `(${pendingProfessionals.length})`}
+                  Locales pendientes de aprobación {pendingBusinesses.length > 0 && `(${pendingBusinesses.length})`}
                 </h2>
                 <p className="mt-1 text-sm text-ink/60">
-                  Estos profesionales se registraron pero aún no son visibles en la plataforma ni pueden recibir reservas.
+                  Estos locales se registraron pero aún no son visibles en la plataforma ni pueden recibir reservas.
                 </p>
 
-                {pendingProfessionals.length === 0 ? (
+                {pendingBusinesses.length === 0 ? (
                   <p className="mt-4 rounded-xl bg-sand px-4 py-6 text-center text-sm text-ink/60">
                     No hay solicitudes pendientes por ahora.
                   </p>
                 ) : (
                   <div className="mt-4 space-y-3">
-                    {pendingProfessionals.map((p) => (
-                      <div key={p.id} className="card p-5">
+                    {pendingBusinesses.map((b) => (
+                      <div key={b.id} className="card p-5">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div className="flex gap-3">
-                            <Avatar name={p.user.name} photoUrl={p.photoUrl} size="md" />
+                            <Avatar name={b.name} photoUrl={b.photoUrl} size="md" />
                             <div>
-                              <h3 className="font-display font-semibold text-ink">{p.user.name}</h3>
-                              <p className="text-sm text-ink/60">{p.user.email}</p>
-                              {p.specialties && <p className="mt-1 text-sm text-ink/50">{p.specialties}</p>}
-                              {p.bio && <p className="mt-2 text-sm text-ink/70">{p.bio}</p>}
+                              <h3 className="font-display font-semibold text-ink">{b.name}</h3>
+                              <p className="text-sm text-ink/60">{b.owner.name} · {b.owner.email}</p>
+                              {b.location && <p className="mt-1 text-sm text-ink/50">{b.location}</p>}
+                              {b.description && <p className="mt-2 text-sm text-ink/70">{b.description}</p>}
                               <p className="mt-2 text-xs text-ink/40">
-                                Registrado el {new Date(p.createdAt).toLocaleDateString('es-ES', { dateStyle: 'medium' })} ·{' '}
-                                {p.services.length} servicio(s) creado(s)
+                                Registrado el {new Date(b.createdAt).toLocaleDateString('es-ES', { dateStyle: 'medium' })} ·{' '}
+                                {b.professionals.length} profesional(es)
                               </p>
                             </div>
                           </div>
                           <div className="flex gap-2">
-                            <button onClick={() => setApproval(p.id, true)} className="btn-primary py-2 text-sm">
+                            <button onClick={() => setApproval(b.id, true)} className="btn-primary py-2 text-sm">
                               Aprobar
                             </button>
                           </div>
@@ -231,21 +235,21 @@ export default function AdminDashboardPage() {
                 )}
               </div>
 
-              {approvedProfessionals.length > 0 && (
+              {approvedBusinesses.length > 0 && (
                 <div>
                   <h2 className="font-display text-lg font-semibold text-ink">Ya aprobados</h2>
                   <div className="mt-4 space-y-2">
-                    {approvedProfessionals.map((p) => (
-                      <div key={p.id} className="card flex flex-wrap items-center justify-between gap-3 p-4">
+                    {approvedBusinesses.map((b) => (
+                      <div key={b.id} className="card flex flex-wrap items-center justify-between gap-3 p-4">
                         <div className="flex items-center gap-3">
-                          <Avatar name={p.user.name} photoUrl={p.photoUrl} size="sm" />
+                          <Avatar name={b.name} photoUrl={b.photoUrl} size="sm" />
                           <div>
-                            <p className="font-medium text-ink">{p.user.name}</p>
-                            <p className="text-sm text-ink/50">{p.user.email}</p>
+                            <p className="font-medium text-ink">{b.name}</p>
+                            <p className="text-sm text-ink/50">{b.owner.name} · {b.owner.email}</p>
                           </div>
                         </div>
                         <button
-                          onClick={() => setApproval(p.id, false)}
+                          onClick={() => setApproval(b.id, false)}
                           className="text-xs font-semibold text-moss-600 hover:underline"
                         >
                           Revocar aprobación
@@ -259,22 +263,20 @@ export default function AdminDashboardPage() {
           )}
 
           {tab === 'metrics' && metrics && (
-            <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-3">
-                {[
-                  { label: 'Usuarios totales', value: metrics.totalUsers },
-                  { label: 'Profesionales', value: metrics.totalProfessionals },
-                  { label: 'Reservas totales', value: metrics.totalBookings },
-                  { label: 'Citas completadas', value: metrics.completedBookings },
-                  { label: 'Ingresos (completadas)', value: `$${metrics.totalRevenue.toFixed(2)}` },
-                ].map((m) => (
-                  <div key={m.label} className="card p-5">
-                    <p className="label">{m.label}</p>
-                    <p className="mt-1 font-display text-3xl font-semibold text-ink">{m.value}</p>
-                  </div>
-                ))}
-              </div>
-              <BookingsByStatusChart bookings={bookings} />
+            <div className="grid gap-4 sm:grid-cols-3">
+              {[
+                { label: 'Usuarios totales', value: metrics.totalUsers },
+                { label: 'Locales', value: metrics.totalBusinesses },
+                { label: 'Profesionales', value: metrics.totalProfessionals },
+                { label: 'Reservas totales', value: metrics.totalBookings },
+                { label: 'Citas completadas', value: metrics.completedBookings },
+                { label: 'Ingresos (completadas)', value: `$${metrics.totalRevenue.toFixed(2)}` },
+              ].map((m) => (
+                <div key={m.label} className="card p-5">
+                  <p className="label">{m.label}</p>
+                  <p className="mt-1 font-display text-3xl font-semibold text-ink">{m.value}</p>
+                </div>
+              ))}
             </div>
           )}
 
@@ -298,7 +300,12 @@ export default function AdminDashboardPage() {
                           {u.role === 'PROFESSIONAL' && (
                             <Avatar name={u.name} photoUrl={u.professionalProfile?.photoUrl ?? null} size="sm" />
                           )}
-                          {u.name}
+                          <div>
+                            {u.name}
+                            {u.ownedBusiness && (
+                              <p className="text-xs font-normal text-ink/40">{u.ownedBusiness.name}</p>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-ink/60">{u.email}</td>
@@ -352,7 +359,7 @@ export default function AdminDashboardPage() {
                         )}
                         <div>
                           <p className="font-medium text-ink">
-                            {b.service.name} · {b.client.name} → {b.professional.user.name}
+                            {b.service.name} · {b.client.name} → {b.professional.user.name} ({b.business.name})
                           </p>
                           <p className="text-sm text-ink/50">
                             {new Date(b.datetime).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}

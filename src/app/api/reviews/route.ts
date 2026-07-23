@@ -40,17 +40,32 @@ export async function POST(req: Request) {
         data: { bookingId, rating, comment },
       });
 
-      const agg = await tx.review.aggregate({
-        where: { booking: { professionalId: booking.professionalId } },
-        _avg: { rating: true },
-        _count: { rating: true },
-      });
+      const [proAgg, businessAgg] = await Promise.all([
+        tx.review.aggregate({
+          where: { booking: { professionalId: booking.professionalId } },
+          _avg: { rating: true },
+          _count: { rating: true },
+        }),
+        tx.review.aggregate({
+          where: { booking: { businessId: booking.businessId } },
+          _avg: { rating: true },
+          _count: { rating: true },
+        }),
+      ]);
 
       await tx.professionalProfile.update({
         where: { id: booking.professionalId },
         data: {
-          ratingAvg: Math.round((agg._avg.rating ?? rating) * 10) / 10,
-          ratingCount: agg._count.rating,
+          ratingAvg: Math.round((proAgg._avg.rating ?? rating) * 10) / 10,
+          ratingCount: proAgg._count.rating,
+        },
+      });
+
+      await tx.business.update({
+        where: { id: booking.businessId },
+        data: {
+          ratingAvg: Math.round((businessAgg._avg.rating ?? rating) * 10) / 10,
+          ratingCount: businessAgg._count.rating,
         },
       });
 

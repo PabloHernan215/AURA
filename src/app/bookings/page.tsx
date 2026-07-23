@@ -12,6 +12,7 @@ interface BookingItem {
   status: 'PENDING' | 'CONFIRMED' | 'CANCELLED' | 'COMPLETED';
   service: { name: string; price: number };
   professional: { id: string; photoUrl: string | null; user: { name: string } };
+  business: { id: string; name: string; location: string | null };
   review: { id: string } | null;
 }
 
@@ -93,8 +94,8 @@ export default function MyBookingsPage() {
       ) : bookings.length === 0 ? (
         <div className="mt-6 rounded-xl bg-sand px-4 py-8 text-center">
           <p className="text-sm text-ink/60">Aún no tienes citas.</p>
-          <Link href="/professionals" className="btn-primary mt-4 inline-flex">
-            Buscar un profesional
+          <Link href="/locales" className="btn-primary mt-4 inline-flex">
+            Buscar un local
           </Link>
         </div>
       ) : (
@@ -106,8 +107,9 @@ export default function MyBookingsPage() {
                   <h3 className="font-display font-semibold text-ink">{b.service.name}</h3>
                   <div className="mt-1 flex items-center gap-2">
                     <Avatar name={b.professional.user.name} photoUrl={b.professional.photoUrl} size="sm" />
-                    <p className="text-sm text-ink/60">con {b.professional.user.name}</p>
+                    <p className="text-sm text-ink/60">con {b.professional.user.name} · {b.business.name}</p>
                   </div>
+                  {b.business.location && <p className="mt-0.5 text-xs text-ink/40">{b.business.location}</p>}
                   <p className="mt-1 text-sm text-ink/50">
                     {new Date(b.datetime).toLocaleString('es-ES', {
                       weekday: 'short',

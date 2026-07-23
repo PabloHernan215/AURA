@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireRole } from '@/lib/session';
 import { getAvailableSlots } from '@/lib/availability';
-import { availabilityWindowSchema } from '@/lib/schemas';
+
+const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
+const windowSchema = z.object({
+  dayOfWeek: z.number().int().min(0).max(6),
+  startTime: z.string().regex(timeRegex, 'Usa el formato HH:mm'),
+  endTime: z.string().regex(timeRegex, 'Usa el formato HH:mm'),
+});
 
 /**
  * GET /api/availability?professionalId=xyz            -> weekly windows (schedule editor)
@@ -47,9 +55,13 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const parsed = availabilityWindowSchema.safeParse(body);
+    const parsed = windowSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message }, { status: 400 });
+    }
+
+    if (parsed.data.startTime >= parsed.data.endTime) {
+      return NextResponse.json({ error: 'La hora de inicio debe ser antes de la hora de fin' }, { status: 400 });
     }
 
     const window = await prisma.availability.create({

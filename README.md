@@ -1,15 +1,17 @@
-# AURA Studio — Beauty & Wellness Booking Platform
+# AURA — Beauty & Wellness Booking Platform
 
-"Uber for beauty appointments." A full-stack MVP: clients book real-time slots with
-independent beauty/wellness professionals, professionals manage their own schedule and
-services, and admins oversee the platform.
+A venue-centric booking marketplace (Fresha-style): clients browse and book **local
+venues** ("locales"), each with its own team of professionals. Venue owners register
+their business and manage staff/bookings; professionals affiliated with a venue manage
+their own services, schedule, and appointments; admins approve venues and oversee the
+platform.
 
 ## Stack
 
 - **Next.js 14** (App Router) — one codebase for UI + API routes
 - **TypeScript** end to end
 - **Prisma + PostgreSQL** (via [neon.tech](https://neon.tech)'s free tier) — same database locally and in production
-- **NextAuth.js** (Credentials provider, JWT sessions) — role-aware auth (`CLIENT` / `PROFESSIONAL` / `ADMIN`)
+- **NextAuth.js** (Credentials provider, JWT sessions) — role-aware auth (`CLIENT` / `PROFESSIONAL` / `BUSINESS_OWNER` / `ADMIN`)
 - **TailwindCSS** — mobile-first styling
 - **Zod** — request validation on every API route
 
@@ -35,8 +37,10 @@ Visit `http://localhost:3000`.
 |---|---|
 | Admin | admin@aura.studio |
 | Client | client@aura.studio |
-| Professional | maria@aura.studio (Hair) |
-| Professional | lucia@aura.studio (Nails) |
+| Business Owner | dueno1@aura.studio (AURA Hub - Centro) |
+| Business Owner | dueno2@aura.studio (AURA Nails Studio) |
+| Professional | maria@aura.studio (Hair, at AURA Hub - Centro) |
+| Professional | lucia@aura.studio (Nails, at AURA Nails Studio) |
 
 ## Project structure
 

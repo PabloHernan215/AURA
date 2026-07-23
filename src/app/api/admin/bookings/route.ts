@@ -13,6 +13,7 @@ export async function GET() {
       include: {
         client: { select: { name: true, email: true } },
         professional: { include: { user: { select: { name: true } } } },
+        business: { select: { name: true } },
         service: { select: { name: true, price: true } },
       },
       orderBy: { datetime: 'desc' },
@@ -26,8 +27,9 @@ export async function GET() {
     }));
     const newBookingsCount = bookingsWithNewFlag.filter((b) => b.isNew).length;
 
-    const [totalUsers, totalProfessionals, totalBookings, completedBookings] = await Promise.all([
+    const [totalUsers, totalBusinesses, totalProfessionals, totalBookings, completedBookings] = await Promise.all([
       prisma.user.count(),
+      prisma.business.count(),
       prisma.professionalProfile.count(),
       prisma.booking.count(),
       prisma.booking.count({ where: { status: 'COMPLETED' } }),
@@ -44,6 +46,7 @@ export async function GET() {
       newBookingsCount,
       metrics: {
         totalUsers,
+        totalBusinesses,
         totalProfessionals,
         totalBookings,
         completedBookings,

@@ -16,6 +16,7 @@ export async function GET() {
         isActive: true,
         createdAt: true,
         professionalProfile: { select: { id: true, photoUrl: true, ratingAvg: true, ratingCount: true } },
+        ownedBusiness: { select: { id: true, name: true, isApproved: true } },
       },
       orderBy: { createdAt: 'desc' },
     });

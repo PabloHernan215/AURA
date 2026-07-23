@@ -9,6 +9,7 @@ export async function GET() {
     const profile = await prisma.professionalProfile.findUnique({
       where: { userId: user.id },
       include: {
+        business: { select: { id: true, name: true, isApproved: true, location: true } },
         services: { orderBy: { createdAt: 'asc' } },
         availability: { orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }] },
       },

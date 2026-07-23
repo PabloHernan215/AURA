@@ -10,12 +10,11 @@ interface ProfileData {
   id: string;
   bio: string;
   specialties: string;
-  location: string | null;
   whatsapp: string;
   photoUrl: string | null;
   ratingAvg: number;
   ratingCount: number;
-  isApproved: boolean;
+  business: { id: string; name: string; isApproved: boolean; location: string | null };
   newBookingsCount: number;
   newBookings: {
     id: string;
@@ -33,7 +32,6 @@ export default function ProfessionalDashboardPage() {
   const [profileId, setProfileId] = useState<string | null>(null);
   const [bio, setBio] = useState('');
   const [specialties, setSpecialties] = useState('');
-  const [location, setLocation] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -52,7 +50,6 @@ export default function ProfessionalDashboardPage() {
           setProfile(data);
           setBio(data.bio ?? '');
           setSpecialties(data.specialties ?? '');
-          setLocation(data.location ?? '');
           setWhatsapp(data.whatsapp ?? '');
           setPhotoUrl(data.photoUrl ?? null);
         }
@@ -91,7 +88,7 @@ export default function ProfessionalDashboardPage() {
     const res = await fetch(`/api/professionals/${profileId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bio, specialties, location, whatsapp, photoUrl: photoUrl ?? '' }),
+      body: JSON.stringify({ bio, specialties, whatsapp, photoUrl: photoUrl ?? '' }),
     });
     setSaving(false);
     if (res.ok) setSaved(true);
@@ -120,15 +117,24 @@ export default function ProfessionalDashboardPage() {
         </div>
       </div>
 
-      {profile && !profile.isApproved && (
+      {profile && (
+        <p className="mt-2 text-sm text-ink/60">
+          Trabajas en{' '}
+          <Link href={`/locales/${profile.business.id}`} className="font-medium text-moss-600 hover:underline">
+            {profile.business.name}
+          </Link>
+        </p>
+      )}
+
+      {profile && !profile.business.isApproved && (
         <div className="mt-5 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
           <span className="mt-0.5 text-amber-500">●</span>
           <div>
-            <p className="text-sm font-semibold text-amber-800">Tu cuenta está pendiente de aprobación</p>
+            <p className="text-sm font-semibold text-amber-800">Tu local está pendiente de aprobación</p>
             <p className="mt-0.5 text-sm text-amber-700">
-              Un administrador de AURA debe revisar y aprobar tu perfil antes de que aparezcas en las
-              búsquedas o puedas recibir reservas. Mientras tanto, puedes completar tu perfil, agregar servicios
-              y configurar tu horario para estar listo apenas te aprueben.
+              Un administrador de AURA debe revisar y aprobar el local antes de que puedas aparecer en las
+              búsquedas o recibir reservas. Mientras tanto, puedes completar tu perfil, agregar servicios
+              y configurar tu horario para estar listo apenas lo aprueben.
             </p>
           </div>
         </div>
@@ -236,13 +242,6 @@ export default function ProfessionalDashboardPage() {
           <div>
             <label className="label">Especialidades (separadas por coma)</label>
             <input className="input" value={specialties} onChange={(e) => setSpecialties(e.target.value)} placeholder="Cabello, Color, Balayage" />
-          </div>
-          <div>
-            <label className="label">Ubicación</label>
-            <input className="input" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="AURA Hub - Centro" />
-            <p className="mt-1 text-xs text-ink/40">
-              Usa una dirección real y completa — así los clientes ven qué tan cerca estás de ellos.
-            </p>
           </div>
           <div>
             <label className="label">Número de WhatsApp</label>

@@ -11,6 +11,8 @@ export default function Navbar() {
   const dashboardHref =
     session?.user.role === 'ADMIN'
       ? '/dashboard/admin'
+      : session?.user.role === 'BUSINESS_OWNER'
+      ? '/dashboard/business'
       : session?.user.role === 'PROFESSIONAL'
       ? '/dashboard/professional'
       : null;
@@ -23,8 +25,8 @@ export default function Navbar() {
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
-          <Link href="/professionals" className="text-sm text-ink/70 hover:text-ink">
-            Buscar profesional
+          <Link href="/locales" className="text-sm text-ink/70 hover:text-ink">
+            Buscar local
           </Link>
           {session?.user.role === 'CLIENT' && (
             <Link href="/bookings" className="text-sm text-ink/70 hover:text-ink">
@@ -69,8 +71,8 @@ export default function Navbar() {
       {menuOpen && (
         <div className="border-t border-ink/8 px-5 py-4 md:hidden">
           <div className="flex flex-col gap-4">
-            <Link href="/professionals" onClick={() => setMenuOpen(false)} className="text-sm font-medium">
-              Buscar profesional
+            <Link href="/locales" onClick={() => setMenuOpen(false)} className="text-sm font-medium">
+              Buscar local
             </Link>
             {session?.user.role === 'CLIENT' && (
               <Link href="/bookings" onClick={() => setMenuOpen(false)} className="text-sm font-medium">

@@ -15,7 +15,7 @@ const bookingSchema = z.object({
   notes: z.string().max(500).optional(),
 });
 
-// GET /api/bookings -> bookings for the logged-in user (client sees their own, professional sees theirs)
+// GET /api/bookings -> bookings for the logged-in user
 export async function GET(req: Request) {
   try {
     const user = await requireUser();
@@ -34,12 +34,29 @@ export async function GET(req: Request) {
       return NextResponse.json(bookings);
     }
 
+    if (user.role === 'BUSINESS_OWNER') {
+      const business = await prisma.business.findUnique({ where: { ownerId: user.id } });
+      if (!business) return NextResponse.json([]);
+
+      const bookings = await prisma.booking.findMany({
+        where: { businessId: business.id, ...(status ? { status: status as any } : {}) },
+        include: {
+          client: { select: { name: true, email: true, whatsapp: true } },
+          service: true,
+          professional: { include: { user: { select: { name: true } } } },
+        },
+        orderBy: { datetime: 'asc' },
+      });
+      return NextResponse.json(bookings);
+    }
+
     // CLIENT (and ADMIN falls back to their own, empty, list — admin uses /api/admin/bookings)
     const bookings = await prisma.booking.findMany({
       where: { clientId: user.id, ...(status ? { status: status as any } : {}) },
       include: {
         service: true,
         professional: { include: { user: { select: { name: true } } } },
+        business: { select: { id: true, name: true, location: true } },
         review: true,
       },
       orderBy: { datetime: 'desc' },
@@ -69,13 +86,13 @@ export async function POST(req: Request) {
 
     const service = await prisma.service.findUnique({
       where: { id: serviceId },
-      include: { professional: { select: { isApproved: true } } },
+      include: { professional: { select: { businessId: true, business: { select: { isApproved: true } } } } },
     });
     if (!service || service.professionalId !== professionalId || !service.isActive) {
       return NextResponse.json({ error: 'Servicio no encontrado para este profesional' }, { status: 404 });
     }
-    if (!service.professional.isApproved) {
-      return NextResponse.json({ error: 'Este profesional aún no está disponible para reservas' }, { status: 403 });
+    if (!service.professional.business.isApproved) {
+      return NextResponse.json({ error: 'Este local aún no está disponible para reservas' }, { status: 403 });
     }
 
     // Re-check availability server-side right before writing (closes the race window)
@@ -91,6 +108,7 @@ export async function POST(req: Request) {
       const booking = await prisma.booking.create({
         data: {
           clientId: user.id,
+          businessId: service.professional.businessId,
           professionalId,
           serviceId,
           datetime: requestedStart,
@@ -104,6 +122,9 @@ export async function POST(req: Request) {
           professional: {
             include: { user: { select: { name: true, email: true } } },
           },
+          business: {
+            select: { name: true, location: true, owner: { select: { email: true } } },
+          },
         },
       });
 
@@ -116,15 +137,17 @@ export async function POST(req: Request) {
         clientWhatsapp: booking.client.whatsapp,
         serviceName: booking.service.name,
         datetime: booking.datetime,
-        location: booking.professional.location,
+        location: booking.business.location,
       });
 
-      // Best-effort email confirmation to the client, the professional, and every admin —
-      // this helper never throws either, so it can never fail or slow down the booking.
+      // Best-effort email confirmation to the client, the professional, the business
+      // owner, and every admin — this helper never throws, so it never blocks the booking.
       const [settings, admins] = await Promise.all([
         getPlatformSettings(),
         prisma.user.findMany({ where: { role: 'ADMIN' }, select: { email: true } }),
       ]);
+
+      const ccEmails = [booking.business.owner.email, ...admins.map((a) => a.email)];
 
       await sendBookingEmails(
         {
@@ -134,10 +157,10 @@ export async function POST(req: Request) {
           professionalEmail: booking.professional.user.email,
           serviceName: booking.service.name,
           datetime: booking.datetime,
-          location: booking.professional.location,
+          location: booking.business.location,
           paymentMethods: settings.paymentMethods,
         },
-        admins.map((a) => a.email)
+        ccEmails
       );
 
       return NextResponse.json(booking, { status: 201 });

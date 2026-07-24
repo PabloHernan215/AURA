@@ -1,0 +1,121 @@
+import { notFound } from 'next/navigation';
+import Link from 'next/link';
+import { prisma } from '@/lib/prisma';
+import StarRating from '@/components/StarRating';
+import Avatar from '@/components/Avatar';
+import ServiceCard from '@/components/ServiceCard';
+import DistanceBadge from '@/components/DistanceBadge';
+
+async function getProfessional(id: string) {
+  const professional = await prisma.professionalProfile.findUnique({
+    where: { id },
+    include: {
+      user: { select: { name: true, isActive: true } },
+      business: { select: { id: true, name: true, location: true, latitude: true, longitude: true, isApproved: true } },
+      services: { where: { isActive: true }, orderBy: { createdAt: 'asc' } },
+      bookings: {
+        where: { status: 'COMPLETED' },
+        include: { review: true },
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+      },
+    },
+  });
+
+  if (!professional || !professional.user.isActive || !professional.business.isApproved) return null;
+  return professional;
+}
+
+export default async function ProfessionalProfilePage({ params }: { params: { id: string } }) {
+  const professional = await getProfessional(params.id);
+  if (!professional) notFound();
+
+  const tags = professional.specialties.split(',').map((s) => s.trim()).filter(Boolean);
+  const reviews = professional.bookings.filter((b) => b.review);
+
+  return (
+    <div className="mx-auto max-w-4xl px-5 py-10">
+      <div className="card overflow-hidden">
+        <div className="h-28 bg-gradient-to-br from-moss-100 to-clay-100" />
+        <div className="px-6 pb-6">
+          <div className="-mt-12">
+            <Avatar name={professional.user.name} photoUrl={professional.photoUrl} size="lg" className="border-4 border-white shadow-md" />
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h1 className="font-display text-2xl font-semibold text-ink">{professional.user.name}</h1>
+              <Link href={`/locales/${professional.business.id}`} className="text-sm text-moss-600 hover:underline">
+                Trabaja en {professional.business.name}
+              </Link>
+              {professional.business.location && (
+                <p className="text-sm text-ink/50">{professional.business.location}</p>
+              )}
+              <DistanceBadge latitude={professional.business.latitude} longitude={professional.business.longitude} />
+            </div>
+            <div className="flex items-center gap-3">
+              <StarRating rating={professional.ratingAvg} count={professional.ratingCount} size="md" />
+            </div>
+          </div>
+
+          {tags.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {tags.map((tag) => (
+                <span key={tag} className="rounded-full bg-sand px-3 py-1 text-xs font-medium text-ink/70">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {professional.bio && <p className="mt-4 text-sm leading-relaxed text-ink/70">{professional.bio}</p>}
+        </div>
+      </div>
+
+      {/* Servicios */}
+      <section className="mt-10">
+        <h2 className="font-display text-xl font-semibold text-ink">Servicios</h2>
+        <p className="mt-1 text-sm text-ink/50">Pasa el cursor o toca una foto para ver el detalle.</p>
+        {professional.services.length === 0 ? (
+          <p className="mt-3 text-sm text-ink/50">Este profesional aún no ha publicado servicios.</p>
+        ) : (
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {professional.services.map((service) => (
+              <ServiceCard
+                key={service.id}
+                name={service.name}
+                description={service.description}
+                price={service.price}
+                duration={service.duration}
+                photoUrl={service.photoUrl}
+                actionLabel="Reservar"
+                actionHref={`/book/${professional.id}/${service.id}`}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Reseñas */}
+      <section className="mt-10">
+        <h2 className="font-display text-xl font-semibold text-ink">
+          Reseñas {reviews.length > 0 && <span className="text-ink/40">({reviews.length})</span>}
+        </h2>
+        {reviews.length === 0 ? (
+          <p className="mt-3 text-sm text-ink/50">Aún no hay reseñas.</p>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {reviews.map((booking) => (
+              <div key={booking.review!.id} className="card p-4">
+                <StarRating rating={booking.review!.rating} />
+                {booking.review!.comment && (
+                  <p className="mt-2 text-sm text-ink/70">{booking.review!.comment}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}

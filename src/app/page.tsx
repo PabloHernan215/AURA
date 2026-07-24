@@ -114,8 +114,11 @@ export default async function LandingPage() {
               <Link href="/locales" className="btn-primary">
                 Reservar mi cita
               </Link>
-              <Link href="/register" className="text-sm font-medium text-ink/60 underline decoration-stone-light underline-offset-4 hover:text-ink">
+              <Link href="/register?role=PROFESSIONAL" className="text-sm font-medium text-ink/60 underline decoration-stone-light underline-offset-4 hover:text-ink">
                 Soy profesional
+              </Link>
+              <Link href="/register?role=BUSINESS_OWNER" className="text-sm font-medium text-ink/60 underline decoration-stone-light underline-offset-4 hover:text-ink">
+                Registrar un local
               </Link>
             </div>
             <p className="mt-5 text-xs text-stone">
@@ -269,7 +272,7 @@ export default async function LandingPage() {
           <p className="text-xs text-stone">Un ritual de belleza y calma.</p>
           <div className="mt-2 flex gap-6 text-xs text-ink/50">
             <Link href="/locales" className="hover:text-ink">Encontrar un local</Link>
-            <Link href="/register" className="hover:text-ink">Registra tu local</Link>
+            <Link href="/register?role=BUSINESS_OWNER" className="hover:text-ink">Registra tu local</Link>
             <Link href="/login" className="hover:text-ink">Iniciar sesión</Link>
           </div>
         </div>

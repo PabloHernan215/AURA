@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 interface BusinessOption {
@@ -13,9 +13,16 @@ interface BusinessOption {
 
 type RoleOption = 'CLIENT' | 'PROFESSIONAL' | 'BUSINESS_OWNER';
 
-export default function RegisterPage() {
+const VALID_ROLES: RoleOption[] = ['CLIENT', 'PROFESSIONAL', 'BUSINESS_OWNER'];
+
+function RegisterForm() {
   const router = useRouter();
-  const [role, setRole] = useState<RoleOption>('CLIENT');
+  const searchParams = useSearchParams();
+  const initialRole = VALID_ROLES.includes(searchParams.get('role') as RoleOption)
+    ? (searchParams.get('role') as RoleOption)
+    : 'CLIENT';
+
+  const [role, setRole] = useState<RoleOption>(initialRole);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -241,5 +248,13 @@ export default function RegisterPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterForm />
+    </Suspense>
   );
 }

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import BusinessCard from '@/components/BusinessCard';
+import HeroSearch from '@/components/HeroSearch';
 
 const CATEGORIES = [
   {
@@ -123,30 +124,7 @@ export default async function LandingPage() {
           </div>
 
           <div className="relative">
-            <div className="card p-7">
-              <p className="label">Próxima disponibilidad</p>
-              <div className="mt-4 flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-clay-100 font-display text-lg text-clay-600">
-                  M
-                </div>
-                <div>
-                  <p className="font-display text-lg text-ink">María González</p>
-                  <p className="text-xs text-stone">Cabello · Color · Balayage</p>
-                </div>
-                <span className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-moss-50 px-2.5 py-1 text-xs font-medium text-moss-600">
-                  <span className="h-1.5 w-1.5 rounded-full bg-moss-500 animate-pulseSoft" />
-                  Hoy, 2:15 p.m.
-                </span>
-              </div>
-              <div className="mt-6 grid grid-cols-4 gap-2">
-                {['2:15', '2:30', '3:00', '4:15'].map((t) => (
-                  <span key={t} className="rounded-md bg-sand py-2.5 text-center text-xs font-medium text-ink/70">
-                    {t}
-                  </span>
-                ))}
-              </div>
-              <p className="mt-5 text-center text-xs text-stone">Así de simple es reservar en AURA</p>
-            </div>
+            <HeroSearch />
           </div>
         </div>
       </section>

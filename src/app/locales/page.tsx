@@ -76,6 +76,15 @@ function BusinessesBrowser() {
     );
   }
 
+  useEffect(() => {
+    // Llegó desde la búsqueda del inicio ("Ver locales cercanos") — pide la
+    // ubicación de una vez, sin que tenga que dar un clic adicional aquí.
+    if (searchParams.get('autoLocate') === '1') {
+      requestLocation();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Adjunta la distancia (si tenemos ambas coordenadas) y ordena por cercanía cuando aplica.
   const withDistance = businesses.map((b) => ({
     ...b,

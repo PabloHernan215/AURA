@@ -1,5 +1,7 @@
-// Sends a WhatsApp notification to a professional when they get a new booking,
-// through Twilio's WhatsApp API.
+// Sends WhatsApp notifications through Twilio's WhatsApp API — always from the SAME
+// single AURA number (TWILIO_WHATSAPP_FROM), to both professionals and clients. There
+// is no per-user or per-business number: every message the platform sends comes from
+// this one centralized AURA number.
 //
 // Requires three environment variables (see .env.example):
 //   TWILIO_ACCOUNT_SID
@@ -8,7 +10,7 @@
 //
 // If these aren't set, this logs a warning and does nothing else — it NEVER throws,
 // so a missing/broken WhatsApp integration can never break the booking flow. The booking
-// is always saved in the platform regardless of whether this message goes out.
+// is always saved in the platform regardless of whether any message goes out.
 
 function normalizePhone(raw: string): string | null {
   const trimmed = raw.trim();
@@ -30,7 +32,7 @@ async function sendWhatsAppMessage(toRawPhone: string, body: string): Promise<{ 
 
   const to = normalizePhone(toRawPhone);
   if (!to) {
-    return { success: false, error: 'Número de WhatsApp del profesional inválido o vacío' };
+    return { success: false, error: 'Número de WhatsApp inválido o vacío' };
   }
 
   try {
@@ -41,7 +43,7 @@ async function sendWhatsAppMessage(toRawPhone: string, body: string): Promise<{ 
         Authorization: 'Basic ' + Buffer.from(`${sid}:${token}`).toString('base64'),
       },
       body: new URLSearchParams({
-        From: from,
+        From: from, // always the one centralized AURA number
         To: `whatsapp:${to}`,
         Body: body,
       }),
@@ -81,7 +83,7 @@ interface NewBookingNotification {
 }
 
 /**
- * Notifies the professional (only) that they have a new confirmed booking.
+ * Notifies the professional that they have a new booking AWAITING their confirmation.
  * Never throws — a failure here never affects the booking, which is already saved.
  */
 export async function notifyProfessionalOfNewBooking(data: NewBookingNotification): Promise<boolean> {
@@ -91,14 +93,48 @@ export async function notifyProfessionalOfNewBooking(data: NewBookingNotificatio
   const address = data.location?.trim() || 'sin dirección registrada';
 
   const message =
-    `¡Hola ${data.professionalName}! Tienes una nueva reserva confirmada en *AURA* 📅\n\n` +
+    `¡Hola ${data.professionalName}! Tienes una nueva reserva en *AURA* pendiente de confirmar 📅\n\n` +
     `👤 Cliente: ${data.clientName}\n` +
     `📱 WhatsApp del cliente: ${data.clientWhatsapp || 'no disponible'}\n` +
     `💇 Servicio: ${data.serviceName}\n` +
     `🗓️ Fecha: ${when}\n` +
     `📍 Dirección: ${address}\n\n` +
-    `Puedes ver el detalle completo y contactar al cliente desde tu panel de AURA.`;
+    `Entra a tu panel de AURA para confirmarla.`;
 
   const result = await sendWhatsAppMessage(data.professionalWhatsapp, message);
+  return result.success;
+}
+
+interface BookingConfirmedNotification {
+  clientWhatsapp: string;
+  clientName: string;
+  professionalName: string;
+  serviceName: string;
+  datetime: Date;
+  location: string | null;
+  paymentMethods: string;
+}
+
+/**
+ * Notifies the client that their booking was confirmed by the professional/local —
+ * sent from the same centralized AURA number as every other message on the platform.
+ * Never throws — a failure here never affects the booking, which is already saved.
+ */
+export async function notifyClientOfConfirmedBooking(data: BookingConfirmedNotification): Promise<boolean> {
+  if (!data.clientWhatsapp) return false;
+
+  const when = formatDateTimeEs(data.datetime);
+  const address = data.location?.trim() || 'Te confirmaremos la dirección exacta por este medio.';
+
+  const message =
+    `¡Hola ${data.clientName}! Tu cita en *AURA* quedó confirmada ✅\n\n` +
+    `💇 Servicio: ${data.serviceName}\n` +
+    `🧑‍🎨 Profesional: ${data.professionalName}\n` +
+    `🗓️ Fecha: ${when}\n` +
+    `📍 Dirección: ${address}\n` +
+    `💳 Formas de pago: ${data.paymentMethods}\n\n` +
+    `¡Te esperamos!`;
+
+  const result = await sendWhatsAppMessage(data.clientWhatsapp, message);
   return result.success;
 }

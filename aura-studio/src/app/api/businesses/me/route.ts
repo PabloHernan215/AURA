@@ -22,27 +22,20 @@ export async function GET() {
       return NextResponse.json({ error: 'Local no encontrado' }, { status: 404 });
     }
 
-    const newBookingsWhere = {
-      businessId: business.id,
-      status: { in: ['PENDING', 'CONFIRMED'] },
-      ...(business.lastBookingsViewedAt ? { createdAt: { gt: business.lastBookingsViewedAt } } : {}),
-    };
+    // Bookings still awaiting confirmation — drives the big "nueva cita" banner on
+    // the owner's dashboard, with an inline Confirmar button.
+    const pendingBookings = await prisma.booking.findMany({
+      where: { businessId: business.id, status: 'PENDING' },
+      include: {
+        client: { select: { name: true } },
+        service: { select: { name: true } },
+        professional: { select: { user: { select: { name: true } } } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    });
 
-    const [newBookingsCount, newBookings] = await Promise.all([
-      prisma.booking.count({ where: newBookingsWhere }),
-      prisma.booking.findMany({
-        where: newBookingsWhere,
-        include: {
-          client: { select: { name: true } },
-          service: { select: { name: true } },
-          professional: { select: { user: { select: { name: true } } } },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 5,
-      }),
-    ]);
-
-    return NextResponse.json({ ...business, newBookingsCount, newBookings });
+    return NextResponse.json({ ...business, pendingBookings });
   } catch (e: any) {
     return NextResponse.json({ error: e.message ?? 'Error' }, { status: e.status ?? 500 });
   }

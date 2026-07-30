@@ -48,15 +48,10 @@ export default function ProfessionalBookingsPage() {
   }
 
   useEffect(() => {
-    if (status === 'authenticated') {
-      load();
-      // Resets the "new bookings" counter shown on the dashboard once the professional
-      // actually looks at their bookings.
-      fetch('/api/bookings/mark-viewed', { method: 'POST' }).catch(() => {});
-    }
+    if (status === 'authenticated') load();
   }, [status]);
 
-  async function updateStatus(id: string, newStatus: 'COMPLETED' | 'CANCELLED') {
+  async function updateStatus(id: string, newStatus: 'CONFIRMED' | 'COMPLETED' | 'CANCELLED') {
     await fetch(`/api/bookings/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -130,12 +125,22 @@ export default function ProfessionalBookingsPage() {
                 </span>
               </div>
 
-              {(b.status === 'PENDING' || b.status === 'CONFIRMED') && (
+              {b.status === 'PENDING' && (
+                <div className="mt-3 flex gap-3">
+                  <button onClick={() => updateStatus(b.id, 'CONFIRMED')} className="text-sm font-medium text-moss-600 hover:underline">
+                    Confirmar
+                  </button>
+                  <button onClick={() => updateStatus(b.id, 'CANCELLED')} className="text-sm font-medium text-ink/50 hover:underline">
+                    Cancelar
+                  </button>
+                </div>
+              )}
+              {b.status === 'CONFIRMED' && (
                 <div className="mt-3 flex gap-3">
                   <button onClick={() => updateStatus(b.id, 'COMPLETED')} className="text-sm font-medium text-clay-600 hover:underline">
                     Marcar completada
                   </button>
-                  <button onClick={() => updateStatus(b.id, 'CANCELLED')} className="text-sm font-medium text-moss-600 hover:underline">
+                  <button onClick={() => updateStatus(b.id, 'CANCELLED')} className="text-sm font-medium text-ink/50 hover:underline">
                     Cancelar
                   </button>
                 </div>

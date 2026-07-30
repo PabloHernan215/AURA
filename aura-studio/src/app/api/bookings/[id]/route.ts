@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireUser } from '@/lib/session';
+import { notifyClientOfConfirmedBooking } from '@/lib/whatsapp';
+import { sendBookingConfirmedEmail } from '@/lib/email';
+import { getPlatformSettings } from '@/lib/settings';
 
 const updateSchema = z.object({
   status: z.enum(['CONFIRMED', 'CANCELLED', 'COMPLETED']),
@@ -13,7 +16,12 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
     const booking = await prisma.booking.findUnique({
       where: { id: params.id },
-      include: { professional: true, business: true },
+      include: {
+        professional: { include: { user: { select: { name: true } } } },
+        business: true,
+        client: { select: { name: true, email: true, whatsapp: true } },
+        service: { select: { name: true } },
+      },
     });
     if (!booking) return NextResponse.json({ error: 'Reserva no encontrada' }, { status: 404 });
 
@@ -35,6 +43,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const { status } = parsed.data;
 
     // Business rules on who can set what
+    if (status === 'CONFIRMED' && !(isProfessionalOwner || isBusinessOwner || isAdmin)) {
+      return NextResponse.json({ error: 'Solo el profesional o el local pueden confirmar una reserva' }, { status: 403 });
+    }
     if (status === 'CANCELLED' && !(isClientOwner || isProfessionalOwner || isBusinessOwner || isAdmin)) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
     }
@@ -60,6 +71,33 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       where: { id: params.id },
       data: { status },
     });
+
+    // The moment a booking is confirmed, tell the client — by WhatsApp (from the one
+    // centralized AURA number) and by email. Both are best-effort and never throw,
+    // so a failure here can never undo or block the confirmation itself.
+    if (status === 'CONFIRMED') {
+      const settings = await getPlatformSettings();
+
+      await notifyClientOfConfirmedBooking({
+        clientWhatsapp: booking.client.whatsapp,
+        clientName: booking.client.name,
+        professionalName: booking.professional.user.name,
+        serviceName: booking.service.name,
+        datetime: booking.datetime,
+        location: booking.business.location,
+        paymentMethods: settings.paymentMethods,
+      });
+
+      await sendBookingConfirmedEmail({
+        clientName: booking.client.name,
+        clientEmail: booking.client.email,
+        professionalName: booking.professional.user.name,
+        serviceName: booking.service.name,
+        datetime: booking.datetime,
+        location: booking.business.location,
+        paymentMethods: settings.paymentMethods,
+      });
+    }
 
     return NextResponse.json(updated);
   } catch (e: any) {

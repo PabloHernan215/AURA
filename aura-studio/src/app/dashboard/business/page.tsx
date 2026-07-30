@@ -15,8 +15,7 @@ interface BusinessData {
   ratingAvg: number;
   ratingCount: number;
   isApproved: boolean;
-  newBookingsCount: number;
-  newBookings: {
+  pendingBookings: {
     id: string;
     datetime: string;
     client: { name: string };
@@ -44,8 +43,9 @@ export default function BusinessDashboardPage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (status !== 'authenticated' || session?.user.role !== 'BUSINESS_OWNER') return;
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+
+  function load() {
     fetch('/api/businesses/me')
       .then((res) => res.json())
       .then((data) => {
@@ -58,7 +58,23 @@ export default function BusinessDashboardPage() {
           setPhotoUrl(data.photoUrl ?? null);
         }
       });
+  }
+
+  useEffect(() => {
+    if (status !== 'authenticated' || session?.user.role !== 'BUSINESS_OWNER') return;
+    load();
   }, [status, session]);
+
+  async function confirmBooking(id: string) {
+    setConfirmingId(id);
+    await fetch(`/api/bookings/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'CONFIRMED' }),
+    });
+    setConfirmingId(null);
+    load();
+  }
 
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -111,6 +127,8 @@ export default function BusinessDashboardPage() {
     );
   }
 
+  const pendingCount = business?.pendingBookings.length ?? 0;
+
   return (
     <div className="mx-auto max-w-3xl px-5 py-10">
       <h1 className="font-display text-2xl font-semibold text-ink">Bienvenido/a, {session.user.name}</h1>
@@ -129,32 +147,43 @@ export default function BusinessDashboardPage() {
         </div>
       )}
 
-      {business && business.newBookingsCount > 0 && (
-        <div className="mt-6 card p-5">
-          <div className="flex items-center justify-between">
-            <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-ink">
-              <span className="h-2 w-2 rounded-full bg-moss-500 animate-pulseSoft" />
-              Notificaciones
+      {/* Aviso grande de citas nuevas — lo primero que se ve al entrar */}
+      {pendingCount > 0 && (
+        <div className="mt-6 rounded-2xl border-2 border-moss-300 bg-moss-50 p-6">
+          <div className="flex items-center gap-2.5">
+            <span className="h-3 w-3 rounded-full bg-moss-500 animate-pulseSoft" />
+            <h2 className="font-display text-2xl font-semibold text-ink">
+              {pendingCount === 1 ? 'Tienes 1 cita nueva' : `Tienes ${pendingCount} citas nuevas`}
             </h2>
-            <Link href="/dashboard/business/bookings" className="text-sm font-medium text-moss-600 hover:underline">
-              Ver todas
-            </Link>
           </div>
-          <div className="mt-3 space-y-2">
-            {business.newBookings.map((b) => (
-              <Link
-                key={b.id}
-                href="/dashboard/business/bookings"
-                className="flex items-center justify-between rounded-xl bg-moss-50/60 px-3.5 py-2.5 text-sm hover:bg-moss-50"
-              >
-                <span className="text-ink">
-                  <span className="font-semibold">{b.client.name}</span> reservó {b.service.name} con{' '}
-                  {b.professional.user.name}
-                </span>
-                <span className="whitespace-nowrap text-xs text-ink/50">
-                  {new Date(b.datetime).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-                </span>
-              </Link>
+          <p className="mt-1 text-sm text-moss-700">Confírmalas para avisarle al cliente por WhatsApp.</p>
+
+          <div className="mt-4 space-y-3">
+            {business!.pendingBookings.map((b) => (
+              <div key={b.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white p-4">
+                <div>
+                  <p className="font-medium text-ink">
+                    <span className="font-semibold">{b.client.name}</span> · {b.service.name} · con{' '}
+                    {b.professional.user.name}
+                  </p>
+                  <p className="text-sm text-ink/50">
+                    {new Date(b.datetime).toLocaleString('es-ES', {
+                      weekday: 'short',
+                      day: 'numeric',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </p>
+                </div>
+                <button
+                  onClick={() => confirmBooking(b.id)}
+                  disabled={confirmingId === b.id}
+                  className="btn-primary py-2 text-sm"
+                >
+                  {confirmingId === b.id ? 'Confirmando…' : 'Confirmar'}
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -163,22 +192,15 @@ export default function BusinessDashboardPage() {
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <Link
           href="/dashboard/business/bookings"
-          className={`card p-4 hover:border-moss-300 ${
-            business && business.newBookingsCount > 0 ? 'border-moss-300 bg-moss-50/40' : ''
-          }`}
+          className={`card p-4 hover:border-moss-300 ${pendingCount > 0 ? 'border-moss-300 bg-moss-50/40' : ''}`}
         >
           <div className="flex items-center gap-2">
             <p className="font-display font-semibold text-ink">Reservas</p>
-            {business && business.newBookingsCount > 0 && (
-              <span className="h-2 w-2 rounded-full bg-moss-500 animate-pulseSoft" />
-            )}
+            {pendingCount > 0 && <span className="h-2 w-2 rounded-full bg-moss-500 animate-pulseSoft" />}
           </div>
-          {business && business.newBookingsCount > 0 ? (
+          {pendingCount > 0 ? (
             <p className="mt-1 font-display text-3xl font-semibold text-moss-600">
-              {business.newBookingsCount}{' '}
-              <span className="font-body text-sm font-normal text-moss-500">
-                nueva{business.newBookingsCount === 1 ? '' : 's'}
-              </span>
+              {pendingCount} <span className="font-body text-sm font-normal text-moss-500">por confirmar</span>
             </p>
           ) : (
             <p className="mt-1 text-sm text-ink/50">Sin reservas nuevas</p>

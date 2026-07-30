@@ -125,6 +125,12 @@ export default function MyBookingsPage() {
                 </span>
               </div>
 
+              {b.status === 'PENDING' && (
+                <p className="mt-2 text-xs text-amber-700">
+                  Esperando que el profesional confirme tu cita. Te avisaremos por WhatsApp y correo.
+                </p>
+              )}
+
               <div className="mt-3 flex flex-col gap-1.5">
                 <div className="flex gap-3">
                   {(b.status === 'PENDING' || b.status === 'CONFIRMED') &&

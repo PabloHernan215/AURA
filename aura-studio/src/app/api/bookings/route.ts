@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { requireRole, requireUser } from '@/lib/session';
 import { isSlotStillAvailable } from '@/lib/availability';
 import { notifyProfessionalOfNewBooking } from '@/lib/whatsapp';
-import { sendBookingEmails } from '@/lib/email';
+import { sendBookingRequestEmails } from '@/lib/email';
 import { getPlatformSettings } from '@/lib/settings';
 
 const bookingSchema = z.object({
@@ -114,7 +114,7 @@ export async function POST(req: Request) {
           datetime: requestedStart,
           durationMin: service.duration,
           notes,
-          status: 'CONFIRMED',
+          status: 'PENDING',
         },
         include: {
           service: true,
@@ -149,7 +149,7 @@ export async function POST(req: Request) {
 
       const ccEmails = [booking.business.owner.email, ...admins.map((a) => a.email)];
 
-      await sendBookingEmails(
+      await sendBookingRequestEmails(
         {
           clientName: booking.client.name,
           clientEmail: booking.client.email,

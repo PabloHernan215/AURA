@@ -208,11 +208,20 @@ function RegisterForm() {
                   </option>
                 ))}
               </select>
-              {businesses.length === 0 && (
+              {businesses.length === 0 ? (
                 <p className="mt-1 text-xs text-ink/40">
-                  Aún no hay locales disponibles. Pídele al dueño de tu local que se registre primero.
+                  Aún no hay locales disponibles. Regístralo tú mismo si eres el dueño, o pídele que se
+                  registre primero.
                 </p>
+              ) : (
+                <p className="mt-1 text-xs text-ink/40">¿Tu local no está en la lista?</p>
               )}
+              <Link
+                href="/register?role=BUSINESS_OWNER"
+                className="mt-1 inline-block text-xs font-semibold text-moss-600 hover:underline"
+              >
+                + Registrar un nuevo local
+              </Link>
             </div>
           )}
 

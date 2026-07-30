@@ -118,12 +118,12 @@ export default function BookingPage({
   if (confirmed) {
     return (
       <div className="mx-auto max-w-md px-5 py-16 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-clay-100 text-clay-600">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-amber-600">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M12 7v5l3 3M12 21a9 9 0 100-18 9 9 0 000 18z" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
-        <h1 className="mt-4 font-display text-2xl font-semibold text-ink">¡Tu cita está confirmada!</h1>
+        <h1 className="mt-4 font-display text-2xl font-semibold text-ink">¡Solicitud enviada!</h1>
         <div className="mt-3 flex items-center justify-center gap-2">
           <Avatar name={professional.name} photoUrl={professional.photoUrl} size="sm" />
           <span className="text-sm font-medium text-ink">{professional.name}</span>
@@ -156,7 +156,7 @@ export default function BookingPage({
         </div>
 
         <p className="mt-3 text-xs text-ink/40">
-          Tu profesional ya puede ver esta reserva y contactarte para coordinar cualquier detalle.
+          Tu profesional debe confirmarla — te avisaremos por WhatsApp y correo en cuanto lo haga.
         </p>
 
         <Link href="/locales" className="btn-primary mt-6 inline-flex">
@@ -222,7 +222,8 @@ export default function BookingPage({
           </p>
         )}
         <p className="text-ink/50">
-          Al confirmar, tu profesional verá tu reserva junto con tu número de WhatsApp para coordinar cualquier detalle contigo.
+          Tu profesional debe confirmar la cita antes de que quede en firme — te avisaremos por
+          WhatsApp y correo apenas lo haga.
         </p>
       </div>
 
@@ -233,7 +234,7 @@ export default function BookingPage({
         disabled={!selectedSlot || submitting}
         className="btn-primary mt-6 w-full"
       >
-        {submitting ? 'Confirmando…' : selectedSlot ? 'Confirmar reserva' : 'Selecciona un horario para continuar'}
+        {submitting ? 'Enviando…' : selectedSlot ? 'Solicitar reserva' : 'Selecciona un horario para continuar'}
       </button>
       <p className="mt-3 text-center text-xs text-ink/40">Se paga en el estudio — no se requiere tarjeta.</p>
     </div>

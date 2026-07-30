@@ -2,8 +2,8 @@
 //
 // Requires two environment variables (see .env.example):
 //   RESEND_API_KEY
-//   EMAIL_FROM   (e.g. "AURA Studio <onboarding@resend.dev>" for testing,
-//                 or "AURA Studio <noreply@tudominio.com>" once you verify a domain)
+//   EMAIL_FROM   (e.g. "AURA <onboarding@resend.dev>" for testing,
+//                 or "AURA <noreply@tudominio.com>" once you verify a domain)
 //
 // If these aren't set, sendEmail logs a warning and does nothing else — it NEVER
 // throws, so a missing/broken email integration can never break the booking flow.
@@ -81,13 +81,14 @@ interface BookingEmailData {
 }
 
 /**
- * Sends the booking confirmation by email to the client and to every admin account.
- * Also copies the professional, as a backup in case their WhatsApp notification isn't
- * configured. Never throws — a failure here never affects the already-saved booking.
+ * Sent right when the client submits a booking request — status is still PENDING at
+ * this point, so the copy makes clear it's awaiting the professional's confirmation.
+ * Goes to the client, the professional (as a WhatsApp backup), the business owner, and
+ * every admin. Never throws — a failure here never affects the already-saved booking.
  */
-export async function sendBookingEmails(
+export async function sendBookingRequestEmails(
   data: BookingEmailData,
-  adminEmails: string[]
+  ccEmails: string[]
 ): Promise<{ clientEmailed: boolean }> {
   const when = formatDateTimeEs(data.datetime);
   const address = data.location?.trim() || 'Te confirmaremos la dirección exacta por otro medio.';
@@ -101,27 +102,60 @@ export async function sendBookingEmails(
   `;
 
   const clientHtml = emailShell(
-    `¡Hola ${data.clientName}! Tu cita quedó confirmada ✅`,
-    detailsHtml
+    `¡Hola ${data.clientName}! Recibimos tu solicitud de cita`,
+    `<p>El local la confirmará en breve — te avisaremos apenas lo haga.</p>${detailsHtml}`
   );
 
   const professionalHtml = emailShell(
-    'Nueva reserva confirmada',
+    'Nueva reserva pendiente de confirmar',
     `<p>👤 <strong>Cliente:</strong> ${data.clientName} (${data.clientEmail})</p>${detailsHtml}`
   );
 
   const adminHtml = emailShell(
-    'Nueva reserva en la plataforma',
+    'Nueva solicitud de reserva en la plataforma',
     `<p>👤 <strong>Cliente:</strong> ${data.clientName} (${data.clientEmail})</p>${detailsHtml}`
   );
 
   const [clientResult] = await Promise.all([
-    sendEmail(data.clientEmail, 'Tu cita en AURA está confirmada', clientHtml),
+    sendEmail(data.clientEmail, 'Recibimos tu solicitud de cita — AURA', clientHtml),
     data.professionalEmail
-      ? sendEmail(data.professionalEmail, 'Nueva reserva confirmada — AURA', professionalHtml)
+      ? sendEmail(data.professionalEmail, 'Nueva reserva pendiente de confirmar — AURA', professionalHtml)
       : Promise.resolve({ success: false }),
-    ...adminEmails.map((email) => sendEmail(email, 'Nueva reserva en AURA', adminHtml)),
+    ...ccEmails.map((email) => sendEmail(email, 'Nueva solicitud de reserva — AURA', adminHtml)),
   ]);
 
   return { clientEmailed: clientResult.success };
+}
+
+interface BookingConfirmedEmailData {
+  clientName: string;
+  clientEmail: string;
+  professionalName: string;
+  serviceName: string;
+  datetime: Date;
+  location: string | null;
+  paymentMethods: string;
+}
+
+/**
+ * Sent to the client only, once the professional/local confirms the booking.
+ * Never throws — a failure here never affects the booking, which is already confirmed.
+ */
+export async function sendBookingConfirmedEmail(data: BookingConfirmedEmailData): Promise<boolean> {
+  const when = formatDateTimeEs(data.datetime);
+  const address = data.location?.trim() || 'Te confirmaremos la dirección exacta por otro medio.';
+
+  const html = emailShell(
+    `¡Hola ${data.clientName}! Tu cita quedó confirmada ✅`,
+    `
+      <p>💇 <strong>Servicio:</strong> ${data.serviceName}</p>
+      <p>🧑‍🎨 <strong>Profesional:</strong> ${data.professionalName}</p>
+      <p>🗓️ <strong>Fecha:</strong> ${when}</p>
+      <p>📍 <strong>Dirección:</strong> ${address}</p>
+      <p>💳 <strong>Formas de pago:</strong> ${data.paymentMethods}</p>
+    `
+  );
+
+  const result = await sendEmail(data.clientEmail, 'Tu cita en AURA está confirmada', html);
+  return result.success;
 }

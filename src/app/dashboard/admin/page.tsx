@@ -20,9 +20,9 @@ interface AdminBooking {
   datetime: string;
   status: string;
   isNew: boolean;
-  client: { name: string };
-  professional: { user: { name: string } };
-  business: { name: string };
+  client: { name: string; whatsapp: string };
+  professional: { whatsapp: string; user: { name: string } };
+  business: { name: string; location: string | null };
   service: { name: string; price: number };
 }
 
@@ -68,6 +68,45 @@ const TAB_LABELS: Record<'pending' | 'metrics' | 'users' | 'bookings' | 'setting
   bookings: 'Reservas',
   settings: 'Configuración',
 };
+
+function formatBookingDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('es-ES', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function buildClientMessage(b: AdminBooking): string {
+  const when = formatBookingDateTime(b.datetime);
+  if (b.status === 'CONFIRMED') {
+    return (
+      `Hola ${b.client.name}, tu cita de ${b.service.name} con ${b.professional.user.name} en ${b.business.name} ` +
+      `quedó confirmada para el ${when}.` +
+      (b.business.location ? ` Dirección: ${b.business.location}.` : '') +
+      ` — AURA`
+    );
+  }
+  if (b.status === 'CANCELLED') {
+    return `Hola ${b.client.name}, tu cita de ${b.service.name} programada para el ${when} fue cancelada. Escríbenos si tienes dudas. — AURA`;
+  }
+  return `Hola ${b.client.name}, recibimos tu solicitud de ${b.service.name} con ${b.professional.user.name} para el ${when}. En breve te confirmamos. — AURA`;
+}
+
+function buildProfessionalMessage(b: AdminBooking): string {
+  const when = formatBookingDateTime(b.datetime);
+  return (
+    `Hola ${b.professional.user.name}, tienes una cita de ${b.service.name} con ${b.client.name} el ${when} ` +
+    `(estado: ${BOOKING_STATUS_LABELS[b.status] ?? b.status}). — AURA`
+  );
+}
+
+function waLink(phone: string, message: string): string {
+  const digits = phone.replace(/[^\d]/g, '');
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+}
 
 export default function AdminDashboardPage() {
   const { data: session, status } = useSession();
@@ -346,30 +385,57 @@ export default function AdminDashboardPage() {
                   bookings.map((b) => (
                     <div
                       key={b.id}
-                      className={`card flex flex-wrap items-center justify-between gap-3 p-4 ${
-                        b.isNew ? 'border-moss-300 bg-moss-50/40' : ''
-                      }`}
+                      className={`card flex flex-col gap-3 p-4 ${b.isNew ? 'border-moss-300 bg-moss-50/40' : ''}`}
                     >
-                      <div className="flex items-center gap-2.5">
-                        {b.isNew && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-moss-500 px-2 py-0.5 text-xs font-semibold text-white">
-                            <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                            Nueva
-                          </span>
-                        )}
-                        <div>
-                          <p className="font-medium text-ink">
-                            {b.service.name} · {b.client.name} → {b.professional.user.name} ({b.business.name})
-                          </p>
-                          <p className="text-sm text-ink/50">
-                            {new Date(b.datetime).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}
-                            {' · '}${b.service.price}
-                          </p>
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          {b.isNew && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-moss-500 px-2 py-0.5 text-xs font-semibold text-white">
+                              <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                              Nueva
+                            </span>
+                          )}
+                          <div>
+                            <p className="font-medium text-ink">
+                              {b.service.name} · {b.client.name} → {b.professional.user.name} ({b.business.name})
+                            </p>
+                            <p className="text-sm text-ink/50">
+                              {new Date(b.datetime).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}
+                              {' · '}${b.service.price}
+                            </p>
+                          </div>
                         </div>
+                        <span className="rounded-full bg-sand px-2.5 py-1 text-xs font-semibold text-ink/70">
+                          {BOOKING_STATUS_LABELS[b.status] ?? b.status}
+                        </span>
                       </div>
-                      <span className="rounded-full bg-sand px-2.5 py-1 text-xs font-semibold text-ink/70">
-                        {BOOKING_STATUS_LABELS[b.status] ?? b.status}
-                      </span>
+
+                      <div className="flex flex-wrap gap-2 border-t border-ink/8 pt-3">
+                        {b.client.whatsapp ? (
+                          <a
+                            href={waLink(b.client.whatsapp, buildClientMessage(b))}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-full bg-moss-50 px-3 py-1.5 text-xs font-semibold text-moss-600 hover:bg-moss-100"
+                          >
+                            💬 WhatsApp al cliente
+                          </a>
+                        ) : (
+                          <span className="text-xs text-ink/30">Cliente sin WhatsApp</span>
+                        )}
+                        {b.professional.whatsapp ? (
+                          <a
+                            href={waLink(b.professional.whatsapp, buildProfessionalMessage(b))}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-full bg-clay-50 px-3 py-1.5 text-xs font-semibold text-clay-600 hover:bg-clay-100"
+                          >
+                            💬 WhatsApp al profesional
+                          </a>
+                        ) : (
+                          <span className="text-xs text-ink/30">Profesional sin WhatsApp</span>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}

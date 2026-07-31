@@ -105,7 +105,9 @@ function buildProfessionalMessage(b: AdminBooking): string {
 
 function waLink(phone: string, message: string): string {
   const digits = phone.replace(/[^\d]/g, '');
-  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+  // api.whatsapp.com/send is more reliable than wa.me for prefilling text on
+  // WhatsApp Web — the wa.me shortlink sometimes drops the message on its redirect.
+  return `https://api.whatsapp.com/send?phone=${digits}&text=${encodeURIComponent(message)}`;
 }
 
 export default function AdminDashboardPage() {

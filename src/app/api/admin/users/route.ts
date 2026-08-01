@@ -12,11 +12,16 @@ export async function GET() {
         id: true,
         name: true,
         email: true,
+        whatsapp: true,
         role: true,
         isActive: true,
         createdAt: true,
-        professionalProfile: { select: { id: true, photoUrl: true, ratingAvg: true, ratingCount: true } },
-        ownedBusiness: { select: { id: true, name: true, isApproved: true } },
+        professionalProfile: {
+          select: { id: true, bio: true, specialties: true, whatsapp: true, photoUrl: true, ratingAvg: true, ratingCount: true },
+        },
+        ownedBusiness: {
+          select: { id: true, name: true, description: true, location: true, whatsapp: true, photoUrl: true, isApproved: true },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });

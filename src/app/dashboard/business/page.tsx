@@ -54,7 +54,7 @@ export default function BusinessDashboardPage() {
           setName(data.name ?? '');
           setDescription(data.description ?? '');
           setLocation(data.location ?? '');
-          setWhatsapp(data.whatsapp ?? '');
+          setWhatsapp(data.whatsapp || '+593 ');
           setPhotoUrl(data.photoUrl ?? null);
         }
       });
@@ -297,7 +297,7 @@ export default function BusinessDashboardPage() {
               className="input"
               value={whatsapp}
               onChange={(e) => setWhatsapp(e.target.value)}
-              placeholder="+52 55 1234 5678"
+              placeholder="+593 99 123 4567"
             />
           </div>
 

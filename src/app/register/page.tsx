@@ -26,7 +26,7 @@ function RegisterForm() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
+  const [whatsapp, setWhatsapp] = useState('+593 ');
   const [businessName, setBusinessName] = useState('');
   const [businessLocation, setBusinessLocation] = useState('');
   const [businessId, setBusinessId] = useState('');
@@ -233,7 +233,7 @@ function RegisterForm() {
               className="input"
               value={whatsapp}
               onChange={(e) => setWhatsapp(e.target.value)}
-              placeholder="+52 55 1234 5678"
+              placeholder="+593 99 123 4567"
             />
             <p className="mt-1 text-xs text-ink/40">
               {role === 'CLIENT'

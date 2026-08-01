@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Avatar from '@/components/Avatar';
@@ -9,10 +9,27 @@ interface UserItem {
   id: string;
   name: string;
   email: string;
+  whatsapp: string;
   role: 'CLIENT' | 'PROFESSIONAL' | 'BUSINESS_OWNER' | 'ADMIN';
   isActive: boolean;
-  professionalProfile: { photoUrl: string | null; ratingAvg: number; ratingCount: number } | null;
-  ownedBusiness: { id: string; name: string; isApproved: boolean } | null;
+  professionalProfile: {
+    id: string;
+    bio: string;
+    specialties: string;
+    whatsapp: string;
+    photoUrl: string | null;
+    ratingAvg: number;
+    ratingCount: number;
+  } | null;
+  ownedBusiness: {
+    id: string;
+    name: string;
+    description: string;
+    location: string | null;
+    whatsapp: string;
+    photoUrl: string | null;
+    isApproved: boolean;
+  } | null;
 }
 
 interface AdminBooking {
@@ -122,6 +139,21 @@ export default function AdminDashboardPage() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: '',
+    whatsapp: '',
+    bio: '',
+    specialties: '',
+    proWhatsapp: '',
+    businessName: '',
+    businessDescription: '',
+    businessLocation: '',
+    businessWhatsapp: '',
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState('');
 
   function load() {
     setLoading(true);
@@ -160,6 +192,70 @@ export default function AdminDashboardPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userId, isActive: !isActive }),
     });
+    load();
+  }
+
+  function startEdit(u: UserItem) {
+    setEditError('');
+    setEditingUserId(u.id);
+    setEditForm({
+      name: u.name,
+      email: u.email,
+      whatsapp: u.whatsapp,
+      bio: u.professionalProfile?.bio ?? '',
+      specialties: u.professionalProfile?.specialties ?? '',
+      proWhatsapp: u.professionalProfile?.whatsapp ?? '',
+      businessName: u.ownedBusiness?.name ?? '',
+      businessDescription: u.ownedBusiness?.description ?? '',
+      businessLocation: u.ownedBusiness?.location ?? '',
+      businessWhatsapp: u.ownedBusiness?.whatsapp ?? '',
+    });
+  }
+
+  async function saveEdit(u: UserItem) {
+    setSavingEdit(true);
+    setEditError('');
+
+    const userRes = await fetch(`/api/admin/users/${u.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: editForm.name, email: editForm.email, whatsapp: editForm.whatsapp }),
+    });
+
+    if (!userRes.ok) {
+      const data = await userRes.json().catch(() => null);
+      setEditError(data?.error ?? 'No se pudo guardar');
+      setSavingEdit(false);
+      return;
+    }
+
+    if (u.professionalProfile) {
+      await fetch(`/api/professionals/${u.professionalProfile.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bio: editForm.bio,
+          specialties: editForm.specialties,
+          whatsapp: editForm.proWhatsapp,
+        }),
+      });
+    }
+
+    if (u.ownedBusiness) {
+      await fetch(`/api/businesses/${u.ownedBusiness.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editForm.businessName,
+          description: editForm.businessDescription,
+          location: editForm.businessLocation,
+          whatsapp: editForm.businessWhatsapp,
+        }),
+      });
+    }
+
+    setSavingEdit(false);
+    setEditingUserId(null);
     load();
   }
 
@@ -335,37 +431,178 @@ export default function AdminDashboardPage() {
                 </thead>
                 <tbody>
                   {users.map((u) => (
-                    <tr key={u.id} className="border-b border-ink/5 last:border-0">
-                      <td className="px-4 py-3 font-medium text-ink">
-                        <div className="flex items-center gap-2.5">
-                          {u.role === 'PROFESSIONAL' && (
-                            <Avatar name={u.name} photoUrl={u.professionalProfile?.photoUrl ?? null} size="sm" />
-                          )}
-                          <div>
-                            {u.name}
-                            {u.ownedBusiness && (
-                              <p className="text-xs font-normal text-ink/40">{u.ownedBusiness.name}</p>
+                    <Fragment key={u.id}>
+                      <tr className="border-b border-ink/5 last:border-0">
+                        <td className="px-4 py-3 font-medium text-ink">
+                          <div className="flex items-center gap-2.5">
+                            {u.role === 'PROFESSIONAL' && (
+                              <Avatar name={u.name} photoUrl={u.professionalProfile?.photoUrl ?? null} size="sm" />
+                            )}
+                            <div>
+                              {u.name}
+                              {u.ownedBusiness && (
+                                <p className="text-xs font-normal text-ink/40">{u.ownedBusiness.name}</p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-ink/60">{u.email}</td>
+                        <td className="px-4 py-3">
+                          <span className="rounded-full bg-sand px-2.5 py-0.5 text-xs font-medium text-ink/70">{ROLE_LABELS[u.role]}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${u.isActive ? 'bg-clay-50 text-clay-600' : 'bg-moss-50 text-moss-600'}`}>
+                            {u.isActive ? 'Activo' : 'Deshabilitado'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex justify-end gap-3">
+                            <button
+                              onClick={() => (editingUserId === u.id ? setEditingUserId(null) : startEdit(u))}
+                              className="text-xs font-semibold text-clay-600 hover:underline"
+                            >
+                              {editingUserId === u.id ? 'Cerrar' : 'Editar'}
+                            </button>
+                            {u.role !== 'ADMIN' && (
+                              <button onClick={() => toggleUser(u.id, u.isActive)} className="text-xs font-semibold text-moss-600 hover:underline">
+                                {u.isActive ? 'Deshabilitar' : 'Habilitar'}
+                              </button>
                             )}
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-ink/60">{u.email}</td>
-                      <td className="px-4 py-3">
-                        <span className="rounded-full bg-sand px-2.5 py-0.5 text-xs font-medium text-ink/70">{ROLE_LABELS[u.role]}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${u.isActive ? 'bg-clay-50 text-clay-600' : 'bg-moss-50 text-moss-600'}`}>
-                          {u.isActive ? 'Activo' : 'Deshabilitado'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {u.role !== 'ADMIN' && (
-                          <button onClick={() => toggleUser(u.id, u.isActive)} className="text-xs font-semibold text-moss-600 hover:underline">
-                            {u.isActive ? 'Deshabilitar' : 'Habilitar'}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
+                      {editingUserId === u.id && (
+                        <tr className="border-b border-ink/5 bg-sand/40">
+                          <td colSpan={5} className="px-4 py-5">
+                            <div className="space-y-4">
+                              <div>
+                                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink/50">Datos de la cuenta</p>
+                                <div className="grid gap-3 sm:grid-cols-3">
+                                  <div>
+                                    <label className="label">Nombre</label>
+                                    <input
+                                      className="input"
+                                      value={editForm.name}
+                                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="label">Correo</label>
+                                    <input
+                                      type="email"
+                                      className="input"
+                                      value={editForm.email}
+                                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="label">WhatsApp</label>
+                                    <input
+                                      type="tel"
+                                      className="input"
+                                      value={editForm.whatsapp}
+                                      onChange={(e) => setEditForm({ ...editForm, whatsapp: e.target.value })}
+                                      placeholder="+593 99 123 4567"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {u.professionalProfile && (
+                                <div>
+                                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink/50">Perfil profesional</p>
+                                  <div className="grid gap-3 sm:grid-cols-3">
+                                    <div>
+                                      <label className="label">Especialidades</label>
+                                      <input
+                                        className="input"
+                                        value={editForm.specialties}
+                                        onChange={(e) => setEditForm({ ...editForm, specialties: e.target.value })}
+                                        placeholder="Cabello, Color"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="label">WhatsApp profesional</label>
+                                      <input
+                                        type="tel"
+                                        className="input"
+                                        value={editForm.proWhatsapp}
+                                        onChange={(e) => setEditForm({ ...editForm, proWhatsapp: e.target.value })}
+                                        placeholder="+593 99 123 4567"
+                                      />
+                                    </div>
+                                    <div className="sm:col-span-3">
+                                      <label className="label">Biografía</label>
+                                      <textarea
+                                        className="input"
+                                        rows={2}
+                                        value={editForm.bio}
+                                        onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {u.ownedBusiness && (
+                                <div>
+                                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink/50">Local</p>
+                                  <div className="grid gap-3 sm:grid-cols-2">
+                                    <div>
+                                      <label className="label">Nombre del local</label>
+                                      <input
+                                        className="input"
+                                        value={editForm.businessName}
+                                        onChange={(e) => setEditForm({ ...editForm, businessName: e.target.value })}
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="label">WhatsApp del local</label>
+                                      <input
+                                        type="tel"
+                                        className="input"
+                                        value={editForm.businessWhatsapp}
+                                        onChange={(e) => setEditForm({ ...editForm, businessWhatsapp: e.target.value })}
+                                        placeholder="+593 99 123 4567"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="label">Dirección</label>
+                                      <input
+                                        className="input"
+                                        value={editForm.businessLocation}
+                                        onChange={(e) => setEditForm({ ...editForm, businessLocation: e.target.value })}
+                                      />
+                                      <p className="mt-1 text-xs text-ink/40">Si la cambias, se recalcula la ubicación automáticamente.</p>
+                                    </div>
+                                    <div>
+                                      <label className="label">Descripción</label>
+                                      <textarea
+                                        className="input"
+                                        rows={1}
+                                        value={editForm.businessDescription}
+                                        onChange={(e) => setEditForm({ ...editForm, businessDescription: e.target.value })}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {editError && <p className="text-sm text-moss-600">{editError}</p>}
+
+                              <div className="flex gap-3">
+                                <button onClick={() => saveEdit(u)} disabled={savingEdit} className="btn-primary py-2 text-sm">
+                                  {savingEdit ? 'Guardando…' : 'Guardar cambios'}
+                                </button>
+                                <button onClick={() => setEditingUserId(null)} className="btn-secondary py-2 text-sm">
+                                  Cancelar
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>

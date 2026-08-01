@@ -11,9 +11,9 @@ export async function GET() {
 
     const bookings = await prisma.booking.findMany({
       include: {
-        client: { select: { name: true, email: true } },
+        client: { select: { name: true, email: true, whatsapp: true } },
         professional: { include: { user: { select: { name: true } } } },
-        business: { select: { name: true } },
+        business: { select: { name: true, location: true } },
         service: { select: { name: true, price: true } },
       },
       orderBy: { datetime: 'desc' },

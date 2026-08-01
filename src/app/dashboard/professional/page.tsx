@@ -51,7 +51,7 @@ export default function ProfessionalDashboardPage() {
           setProfile(data);
           setBio(data.bio ?? '');
           setSpecialties(data.specialties ?? '');
-          setWhatsapp(data.whatsapp ?? '');
+          setWhatsapp(data.whatsapp || '+593 ');
           setPhotoUrl(data.photoUrl ?? null);
         }
       });
@@ -273,7 +273,7 @@ export default function ProfessionalDashboardPage() {
               className="input"
               value={whatsapp}
               onChange={(e) => setWhatsapp(e.target.value)}
-              placeholder="+52 55 1234 5678"
+              placeholder="+593 99 123 4567"
             />
             <p className="mt-1 text-xs text-ink/40">
               Lo usamos para avisarte por WhatsApp cuando recibas una nueva reserva. Nunca se muestra públicamente.

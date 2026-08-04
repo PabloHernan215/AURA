@@ -94,16 +94,17 @@ function BusinessesBrowser() {
         : null,
   }));
 
-  // Regla de negocio: solo mostramos locales dentro de un radio de 3 km del
-  // cliente. Si no conocemos la distancia (su dirección aún no se geocodificó),
-  // lo ocultamos también — no podemos confirmar que cumple la regla.
-  const visible = userCoords
-    ? withDistance.filter((b) => b.distanceKm != null && b.distanceKm <= MAX_DISTANCE_KM)
-    : withDistance;
+  // Ya no ocultamos ningún local: destacamos los que están dentro del radio
+  // de 3 km (ordenados por cercanía) y debajo mostramos el resto (ya ordenado
+  // por calificación, tal como lo devuelve la API).
+  const nearby = userCoords
+    ? [...withDistance]
+        .filter((b) => b.distanceKm != null && b.distanceKm <= MAX_DISTANCE_KM)
+        .sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0))
+    : [];
 
-  const sorted = userCoords
-    ? [...visible].sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0))
-    : visible;
+  const nearbyIds = new Set(nearby.map((b) => b.id));
+  const others = userCoords ? withDistance.filter((b) => !nearbyIds.has(b.id)) : withDistance;
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-14">
@@ -132,7 +133,9 @@ function BusinessesBrowser() {
       {locationStatus === 'granted' && (
         <p className="mt-5 inline-flex items-center gap-1.5 text-sm font-medium text-moss-600">
           <span className="h-1.5 w-1.5 rounded-full bg-moss-500" />
-          Mostrando locales a menos de {MAX_DISTANCE_KM} km de ti
+          {nearby.length > 0
+            ? `Destacando locales a menos de ${MAX_DISTANCE_KM} km de ti`
+            : `No encontramos locales a menos de ${MAX_DISTANCE_KM} km — aquí tienes todos los disponibles`}
         </p>
       )}
 
@@ -161,30 +164,62 @@ function BusinessesBrowser() {
       <div className="mt-10">
         {loading ? (
           <p className="text-sm text-ink/50">Cargando locales…</p>
-        ) : sorted.length === 0 ? (
+        ) : nearby.length === 0 && others.length === 0 ? (
           <p className="rounded-xl bg-sand px-4 py-6 text-center text-sm text-ink/60">
-            {userCoords
-              ? `No encontramos locales a menos de ${MAX_DISTANCE_KM} km de tu ubicación por ahora.`
-              : 'Ningún local coincide con tu búsqueda todavía.'}
+            Ningún local coincide con tu búsqueda todavía.
           </p>
         ) : (
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {sorted.map((b) => (
-              <BusinessCard
-                key={b.id}
-                id={b.id}
-                name={b.name}
-                photoUrl={b.photoUrl}
-                specialties={b.specialties}
-                location={b.location}
-                distanceKm={b.distanceKm}
-                ratingAvg={b.ratingAvg}
-                ratingCount={b.ratingCount}
-                professionalCount={b.professionalCount}
-                startingPrice={b.startingPrice}
-              />
-            ))}
-          </div>
+          <>
+            {nearby.length > 0 && (
+              <section>
+                <h2 className="font-display text-lg font-medium text-ink">
+                  Cerca de ti (a menos de {MAX_DISTANCE_KM} km)
+                </h2>
+                <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {nearby.map((b) => (
+                    <BusinessCard
+                      key={b.id}
+                      id={b.id}
+                      name={b.name}
+                      photoUrl={b.photoUrl}
+                      specialties={b.specialties}
+                      location={b.location}
+                      distanceKm={b.distanceKm}
+                      ratingAvg={b.ratingAvg}
+                      ratingCount={b.ratingCount}
+                      professionalCount={b.professionalCount}
+                      startingPrice={b.startingPrice}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {others.length > 0 && (
+              <section className={nearby.length > 0 ? 'mt-12' : ''}>
+                {nearby.length > 0 && (
+                  <h2 className="font-display text-lg font-medium text-ink">Todos los locales</h2>
+                )}
+                <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {others.map((b) => (
+                    <BusinessCard
+                      key={b.id}
+                      id={b.id}
+                      name={b.name}
+                      photoUrl={b.photoUrl}
+                      specialties={b.specialties}
+                      location={b.location}
+                      distanceKm={b.distanceKm}
+                      ratingAvg={b.ratingAvg}
+                      ratingCount={b.ratingCount}
+                      professionalCount={b.professionalCount}
+                      startingPrice={b.startingPrice}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
         )}
       </div>
     </div>

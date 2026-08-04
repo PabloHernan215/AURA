@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import StarRating from '@/components/StarRating';
 import Avatar from '@/components/Avatar';
 import DistanceBadge from '@/components/DistanceBadge';
+import LocationMap from '@/components/LocationMap';
+import PhotoGallery from '@/components/PhotoGallery';
 
 async function getBusiness(id: string) {
   const business = await prisma.business.findUnique({
@@ -48,6 +50,15 @@ export default async function BusinessProfilePage({ params }: { params: { id: st
 
           {business.description && (
             <p className="mt-4 text-sm leading-relaxed text-ink/70">{business.description}</p>
+          )}
+
+          <LocationMap location={business.location} latitude={business.latitude} longitude={business.longitude} />
+
+          {business.photos.length > 0 && (
+            <>
+              <h2 className="mt-6 font-display text-lg font-semibold text-ink">Fotos</h2>
+              <PhotoGallery photos={business.photos} name={business.name} />
+            </>
           )}
         </div>
       </div>

@@ -30,6 +30,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     latitude: business.latitude,
     longitude: business.longitude,
     photoUrl: business.photoUrl,
+    photos: business.photos,
     ratingAvg: business.ratingAvg,
     ratingCount: business.ratingCount,
     professionals: business.professionals.map((p) => ({
@@ -51,6 +52,7 @@ const updateSchema = z.object({
   location: z.string().max(200).optional(),
   whatsapp: z.string().max(30).optional(),
   photoUrl: z.string().max(2_000_000).optional().or(z.literal('')),
+  photos: z.array(z.string().max(2_000_000)).max(5).optional(),
 });
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {

@@ -66,7 +66,7 @@ export default async function LandingPage() {
     where: { isApproved: true, owner: { isActive: true } },
     include: { professionals: { select: { specialties: true, services: { select: { price: true }, where: { isActive: true } } } } },
     orderBy: { ratingAvg: 'desc' },
-    take: 3,
+    take: 10,
   });
 
   const featured = featuredBusinesses.map((b) => {

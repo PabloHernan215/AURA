@@ -52,6 +52,7 @@ model Business {
   longitude    Float?
   whatsapp     String  @default("") // business contact number, never shown publicly (see /docs on booking flow)
   photoUrl     String?
+  photos       String[] @default([]) // up to 5 additional gallery photos, same base64 format as photoUrl
   ratingAvg    Float   @default(0)
   ratingCount  Int     @default(0)
   isApproved   Boolean @default(false) // admin must approve before the business appears publicly or can receive bookings

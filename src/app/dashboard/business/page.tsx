@@ -12,6 +12,7 @@ interface BusinessData {
   location: string | null;
   whatsapp: string;
   photoUrl: string | null;
+  photos: string[];
   ratingAvg: number;
   ratingCount: number;
   isApproved: boolean;
@@ -37,11 +38,16 @@ export default function BusinessDashboardPage() {
   const [location, setLocation] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [photoError, setPhotoError] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [galleryError, setGalleryError] = useState('');
+  const [uploadingGalleryPhoto, setUploadingGalleryPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const MAX_GALLERY_PHOTOS = 5;
 
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
 
@@ -56,6 +62,7 @@ export default function BusinessDashboardPage() {
           setLocation(data.location ?? '');
           setWhatsapp(data.whatsapp || '+593 ');
           setPhotoUrl(data.photoUrl ?? null);
+          setPhotos(Array.isArray(data.photos) ? data.photos : []);
         }
       });
   }
@@ -101,6 +108,40 @@ export default function BusinessDashboardPage() {
     }
   }
 
+  async function handleGalleryPhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setGalleryError('');
+
+    if (!file.type.startsWith('image/')) {
+      setGalleryError('Selecciona un archivo de imagen (JPG, PNG, etc.)');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setGalleryError('La imagen es muy pesada. Intenta con una de menos de 8 MB.');
+      return;
+    }
+    if (photos.length >= MAX_GALLERY_PHOTOS) {
+      setGalleryError(`Ya tienes ${MAX_GALLERY_PHOTOS} fotos. Elimina una para agregar otra.`);
+      return;
+    }
+
+    setUploadingGalleryPhoto(true);
+    try {
+      const resized = await resizeImageToBase64(file, 800, 0.82);
+      setPhotos((prev) => [...prev, resized]);
+    } catch {
+      setGalleryError('No se pudo procesar la imagen. Intenta con otra.');
+    } finally {
+      setUploadingGalleryPhoto(false);
+      if (galleryInputRef.current) galleryInputRef.current.value = '';
+    }
+  }
+
+  function removeGalleryPhoto(index: number) {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
+  }
+
   async function handleSave() {
     if (!business) return;
     setSaving(true);
@@ -108,7 +149,7 @@ export default function BusinessDashboardPage() {
     const res = await fetch(`/api/businesses/${business.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, description, location, whatsapp, photoUrl: photoUrl ?? '' }),
+      body: JSON.stringify({ name, description, location, whatsapp, photoUrl: photoUrl ?? '', photos }),
     });
     setSaving(false);
     if (res.ok) setSaved(true);
@@ -273,6 +314,49 @@ export default function BusinessDashboardPage() {
                 {photoError && <p className="mt-1 text-xs text-moss-600">{photoError}</p>}
               </div>
             </div>
+          </div>
+
+          <div>
+            <label className="label">
+              Fotos del local ({photos.length}/{MAX_GALLERY_PHOTOS})
+            </label>
+            <p className="mt-0.5 text-xs text-ink/40">
+              Ayuda a tus clientes a ver cómo es el lugar donde serán atendidos.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-3">
+              {photos.map((p, i) => (
+                <div key={i} className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-sand">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p} alt={`Foto ${i + 1}`} className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeGalleryPhoto(i)}
+                    className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100"
+                    aria-label={`Quitar foto ${i + 1}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {photos.length < MAX_GALLERY_PHOTOS && (
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  disabled={uploadingGalleryPhoto}
+                  className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-dashed border-ink/20 text-xs font-medium text-ink/50 hover:border-moss-300 hover:text-moss-600"
+                >
+                  {uploadingGalleryPhoto ? '…' : '+ Agregar'}
+                </button>
+              )}
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleGalleryPhotoChange}
+              />
+            </div>
+            {galleryError && <p className="mt-1 text-xs text-moss-600">{galleryError}</p>}
           </div>
 
           <div>

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import StarRating from '@/components/StarRating';
 import Avatar from '@/components/Avatar';
-import ServiceCard from '@/components/ServiceCard';
+import ServicesGallery from '@/components/ServicesGallery';
 import DistanceBadge from '@/components/DistanceBadge';
 
 async function getProfessional(id: string) {
@@ -75,24 +75,11 @@ export default async function ProfessionalProfilePage({ params }: { params: { id
       {/* Servicios */}
       <section className="mt-10">
         <h2 className="font-display text-xl font-semibold text-ink">Servicios</h2>
-        <p className="mt-1 text-sm text-ink/50">Pasa el cursor o toca una foto para ver el detalle.</p>
+        <p className="mt-1 text-sm text-ink/50">Toca una foto para ver el detalle completo antes de reservar.</p>
         {professional.services.length === 0 ? (
           <p className="mt-3 text-sm text-ink/50">Este profesional aún no ha publicado servicios.</p>
         ) : (
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {professional.services.map((service) => (
-              <ServiceCard
-                key={service.id}
-                name={service.name}
-                description={service.description}
-                price={service.price}
-                duration={service.duration}
-                photoUrl={service.photoUrl}
-                actionLabel="Reservar"
-                actionHref={`/book/${professional.id}/${service.id}`}
-              />
-            ))}
-          </div>
+          <ServicesGallery services={professional.services} professionalId={professional.id} />
         )}
       </section>
 

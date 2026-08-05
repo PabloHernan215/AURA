@@ -201,7 +201,11 @@ function RegisterForm() {
                   Usa una dirección real y completa — así los clientes ven qué tan cerca están de ti.
                 </p>
                 <div className="mt-2">
-                  <AddressMapPicker address={businessLocation} onChange={setBusinessCoords} />
+                  <AddressMapPicker
+                    address={businessLocation}
+                    onChange={setBusinessCoords}
+                    onAddressResolved={setBusinessLocation}
+                  />
                 </div>
               </div>
             </>

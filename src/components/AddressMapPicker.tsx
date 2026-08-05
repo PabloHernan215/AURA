@@ -28,25 +28,32 @@ interface Coordinates {
 interface AddressMapPickerProps {
   address: string;
   onChange: (coords: Coordinates | null) => void;
+  /** Called when a location is picked via GPS/enlace and we could resolve a
+   * human-readable address for it, so the address field can autofill. */
+  onAddressResolved?: (address: string) => void;
 }
 
-export default function AddressMapPicker({ address, onChange }: AddressMapPickerProps) {
+export default function AddressMapPicker({ address, onChange, onAddressResolved }: AddressMapPickerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const onAddressResolvedRef = useRef(onAddressResolved);
+  onAddressResolvedRef.current = onAddressResolved;
 
   const [coords, setCoords] = useState<Coordinates | null>(null);
-  const [searching, setSearching] = useState(false);
+  const [busy, setBusy] = useState<'address' | 'gps' | 'link' | null>(null);
   const [error, setError] = useState('');
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [mapsLink, setMapsLink] = useState('');
 
   async function handleSearch() {
     if (!address.trim()) {
       setError('Escribe primero la dirección arriba');
       return;
     }
-    setSearching(true);
+    setBusy('address');
     setError('');
     try {
       const res = await fetch(`/api/geocode?address=${encodeURIComponent(address)}`);
@@ -59,7 +66,62 @@ export default function AddressMapPicker({ address, onChange }: AddressMapPicker
     } catch {
       setError('No se pudo ubicar esa dirección. Intenta de nuevo.');
     } finally {
-      setSearching(false);
+      setBusy(null);
+    }
+  }
+
+  function handleUseCurrentLocation() {
+    if (!('geolocation' in navigator)) {
+      setError('Tu navegador no soporta obtener tu ubicación actual.');
+      return;
+    }
+    setBusy('gps');
+    setError('');
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const here = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+        setCoords(here);
+        try {
+          const res = await fetch(`/api/geocode/reverse?lat=${here.latitude}&lng=${here.longitude}`);
+          const data = await res.json();
+          if (res.ok && data?.address) onAddressResolvedRef.current?.(data.address);
+        } catch {
+          // Non-fatal — the pin is already set, the owner can type the address by hand.
+        } finally {
+          setBusy(null);
+        }
+      },
+      () => {
+        setError('No pudimos acceder a tu ubicación — revisa los permisos del navegador.');
+        setBusy(null);
+      },
+      { timeout: 8000 }
+    );
+  }
+
+  async function handleUseMapsLink() {
+    if (!mapsLink.trim()) {
+      setError('Pega primero el enlace de Google Maps');
+      return;
+    }
+    setBusy('link');
+    setError('');
+    try {
+      const res = await fetch(`/api/geocode?mapsUrl=${encodeURIComponent(mapsLink.trim())}`);
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data?.error ?? 'No pudimos leer la ubicación de ese enlace');
+        return;
+      }
+      const here = { latitude: data.latitude, longitude: data.longitude };
+      setCoords(here);
+      const reverseRes = await fetch(`/api/geocode/reverse?lat=${here.latitude}&lng=${here.longitude}`);
+      const reverseData = await reverseRes.json();
+      if (reverseRes.ok && reverseData?.address) onAddressResolvedRef.current?.(reverseData.address);
+    } catch {
+      setError('No pudimos leer la ubicación de ese enlace. Intenta de nuevo.');
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -102,14 +164,52 @@ export default function AddressMapPicker({ address, onChange }: AddressMapPicker
 
   return (
     <div>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={handleUseCurrentLocation}
+          disabled={busy !== null}
+          className="btn-secondary py-2 text-sm"
+        >
+          {busy === 'gps' ? 'Obteniendo tu ubicación…' : '📍 Usar mi ubicación actual'}
+        </button>
+        <button
+          type="button"
+          onClick={handleSearch}
+          disabled={busy !== null}
+          className="btn-secondary py-2 text-sm"
+        >
+          {busy === 'address' ? 'Buscando…' : coords ? 'Buscar de nuevo' : 'Ver en el mapa'}
+        </button>
+      </div>
+
       <button
         type="button"
-        onClick={handleSearch}
-        disabled={searching}
-        className="btn-secondary py-2 text-sm"
+        onClick={() => setShowLinkInput((v) => !v)}
+        className="mt-2 text-xs font-medium text-moss-600 hover:underline"
       >
-        {searching ? 'Buscando…' : coords ? 'Buscar de nuevo' : 'Ver en el mapa'}
+        {showLinkInput ? 'Ocultar' : '¿Prefieres pegar un enlace de Google Maps?'}
       </button>
+
+      {showLinkInput && (
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+          <input
+            className="input"
+            value={mapsLink}
+            onChange={(e) => setMapsLink(e.target.value)}
+            placeholder="https://maps.google.com/... o https://maps.app.goo.gl/..."
+          />
+          <button
+            type="button"
+            onClick={handleUseMapsLink}
+            disabled={busy !== null}
+            className="btn-secondary shrink-0 py-2 text-sm"
+          >
+            {busy === 'link' ? 'Leyendo…' : 'Usar enlace'}
+          </button>
+        </div>
+      )}
+
       {error && <p className="mt-1 text-xs text-moss-600">{error}</p>}
 
       {coords && (

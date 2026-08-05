@@ -22,9 +22,8 @@ export default function HeroSearch() {
     e.preventDefault();
     const params = new URLSearchParams();
     if (treatment !== 'All') params.set('specialty', treatment);
-    // Le pide la ubicación automáticamente al llegar a /locales, para mostrar
-    // de una vez los locales más cercanos sin un clic adicional.
-    params.set('autoLocate', '1');
+    // /locales ya pide la ubicación automáticamente al montar, no hace falta
+    // ninguna bandera extra en la URL.
     router.push(`/locales?${params.toString()}`);
   }
 

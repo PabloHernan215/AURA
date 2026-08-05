@@ -26,44 +26,46 @@ export default function HomeHero() {
       </div>
 
       <div className="mx-auto max-w-6xl px-5 pb-20 pt-16 sm:pt-24">
+        <div className="mb-10 flex flex-col items-center text-center sm:mb-14">
+          <motion.span
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="mb-5 inline-block text-xs font-medium uppercase tracking-[0.15em] text-stone"
+          >
+            Cuidado personal, belleza y bienestar
+          </motion.span>
+
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.08 }}
+            className="inline-flex items-center gap-2.5 rounded-full bg-moss-50 px-6 py-3 text-base font-medium text-moss-600 shadow-sm sm:text-lg"
+          >
+            <span className="h-2 w-2 rounded-full bg-moss-500 animate-pulseSoft" />
+            <span className="inline-flex items-center gap-1.5">
+              Especialistas en
+              <span className="relative inline-block min-w-[7.5ch] text-left sm:min-w-[9ch]">
+                <AnimatePresence mode="wait">
+                  <motion.span
+                    key={ROTATING_WORDS[wordIndex]}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.3 }}
+                    className="inline-block font-semibold"
+                  >
+                    {ROTATING_WORDS[wordIndex]}
+                  </motion.span>
+                </AnimatePresence>
+              </span>
+              cerca de ti
+            </span>
+          </motion.div>
+        </div>
+
         <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
           <div>
-            <motion.span
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="mb-4 inline-block text-xs font-medium uppercase tracking-[0.15em] text-stone"
-            >
-              Cuidado personal, belleza y bienestar
-            </motion.span>
-
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.08 }}
-              className="mb-6 inline-flex items-center gap-2 rounded-full bg-moss-50 px-3.5 py-1.5 text-xs font-medium text-moss-600"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-moss-500 animate-pulseSoft" />
-              <span className="inline-flex items-center gap-1">
-                Especialistas en
-                <span className="relative inline-block min-w-[6.5ch] text-left">
-                  <AnimatePresence mode="wait">
-                    <motion.span
-                      key={ROTATING_WORDS[wordIndex]}
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
-                      transition={{ duration: 0.3 }}
-                      className="inline-block font-semibold"
-                    >
-                      {ROTATING_WORDS[wordIndex]}
-                    </motion.span>
-                  </AnimatePresence>
-                </span>
-                cerca de ti
-              </span>
-            </motion.div>
-
             <motion.h1
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}

@@ -1,9 +1,12 @@
 // Turns a plain address string (e.g. "AURA Hub - Centro, CDMX") into coordinates,
-// using OpenStreetMap's free Nominatim API — no signup or API key required.
+// using LocationIQ's geocoding API (same request/response shape as OpenStreetMap's
+// Nominatim, which LocationIQ proxies — the free plan just needs a key, no card).
 //
-// Usage policy note: Nominatim asks for a maximum of ~1 request/second and a
-// descriptive User-Agent, which is exactly how this is called (only on the rare
-// occasion a professional saves/changes their location text).
+// We switched away from calling Nominatim directly because its public instance
+// blocks/rate-limits shared cloud IPs (Vercel serverless included), which made
+// geocoding silently fail in production. Requires LOCATIONIQ_API_KEY — see
+// .env.example. Without it, this logs a warning and returns null, same as
+// before: geocoding is always best-effort and never blocks registration/saves.
 
 interface Coordinates {
   latitude: number;
@@ -14,14 +17,15 @@ export async function geocodeAddress(address: string): Promise<Coordinates | nul
   const trimmed = address.trim();
   if (!trimmed) return null;
 
+  const apiKey = process.env.LOCATIONIQ_API_KEY;
+  if (!apiKey) {
+    console.warn('[Geocode] LOCATIONIQ_API_KEY no configurada — no se geocodificó la dirección.');
+    return null;
+  }
+
   try {
-    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(trimmed)}`;
-    const response = await fetch(url, {
-      headers: {
-        // Nominatim's usage policy requires a descriptive User-Agent identifying the app.
-        'User-Agent': 'AURA-Studio-Booking-App/1.0 (contact: admin@example.com)',
-      },
-    });
+    const url = `https://us1.locationiq.com/v1/search?key=${apiKey}&format=json&limit=1&q=${encodeURIComponent(trimmed)}`;
+    const response = await fetch(url);
 
     if (!response.ok) return null;
 

@@ -14,6 +14,10 @@ const registerSchema = z
     // Only required when role === 'BUSINESS_OWNER'
     businessName: z.string().max(100).optional(),
     businessLocation: z.string().max(200).optional(),
+    // Set when the owner fine-tuned the pin on the registration map — if present,
+    // these are used as-is instead of re-geocoding the address text.
+    businessLatitude: z.number().optional(),
+    businessLongitude: z.number().optional(),
     // Only required when role === 'PROFESSIONAL'
     businessId: z.string().optional(),
   })
@@ -62,7 +66,18 @@ export async function POST(req: Request) {
       );
     }
 
-    const { name, email, password, role, whatsapp, businessName, businessLocation, businessId } = parsed.data;
+    const {
+      name,
+      email,
+      password,
+      role,
+      whatsapp,
+      businessName,
+      businessLocation,
+      businessLatitude,
+      businessLongitude,
+      businessId,
+    } = parsed.data;
     const normalizedEmail = email.toLowerCase();
 
     const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
@@ -92,8 +107,14 @@ export async function POST(req: Request) {
     });
 
     if (role === 'BUSINESS_OWNER') {
-      // Geocode the address in the background — best-effort, never blocks registration.
-      const coords = await geocodeAddress(businessLocation!.trim());
+      // If the owner fine-tuned the pin on the registration map, trust those exact
+      // coordinates instead of re-geocoding — the whole point was letting them
+      // correct an imprecise auto-geocoded result. Otherwise fall back to geocoding
+      // the address text, same as before (best-effort, never blocks registration).
+      const coords =
+        businessLatitude != null && businessLongitude != null
+          ? { latitude: businessLatitude, longitude: businessLongitude }
+          : await geocodeAddress(businessLocation!.trim());
 
       await prisma.business.create({
         data: {

@@ -49,6 +49,7 @@ const updateSchema = z.object({
   whatsapp: z.string().max(30).optional(),
   // Accepts either a regular URL or a base64 data URI produced by the in-browser photo upload.
   photoUrl: z.string().max(2_000_000).optional().or(z.literal('')),
+  businessId: z.string().optional(),
 });
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
@@ -66,6 +67,32 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const parsed = updateSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues[0]?.message }, { status: 400 });
+    }
+
+    if (parsed.data.businessId && parsed.data.businessId !== profile.businessId) {
+      const newBusiness = await prisma.business.findUnique({ where: { id: parsed.data.businessId } });
+      if (!newBusiness || !newBusiness.isApproved) {
+        return NextResponse.json({ error: 'El local seleccionado no es válido' }, { status: 400 });
+      }
+
+      // Blocks the switch while the client still expects to see this professional at
+      // the old local — they must resolve (complete/cancel) those bookings first.
+      const upcomingBookings = await prisma.booking.count({
+        where: {
+          professionalId: params.id,
+          status: { in: ['PENDING', 'CONFIRMED'] },
+          datetime: { gte: new Date() },
+        },
+      });
+      if (upcomingBookings > 0) {
+        return NextResponse.json(
+          {
+            error:
+              'Tienes reservas pendientes o confirmadas próximas. Complétalas o cancélalas antes de cambiar de local.',
+          },
+          { status: 409 }
+        );
+      }
     }
 
     const updated = await prisma.professionalProfile.update({

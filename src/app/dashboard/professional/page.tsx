@@ -27,6 +27,12 @@ interface ProfileData {
   availability: { id: string }[];
 }
 
+interface BusinessOption {
+  id: string;
+  name: string;
+  location: string | null;
+}
+
 export default function ProfessionalDashboardPage() {
   const { data: session, status } = useSession();
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -41,6 +47,12 @@ export default function ProfessionalDashboardPage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [businessOptions, setBusinessOptions] = useState<BusinessOption[]>([]);
+  const [newBusinessId, setNewBusinessId] = useState('');
+  const [changingBusiness, setChangingBusiness] = useState(false);
+  const [businessChangeError, setBusinessChangeError] = useState('');
+  const [businessChangeSaved, setBusinessChangeSaved] = useState(false);
 
   function load() {
     fetch('/api/professionals/me')
@@ -60,6 +72,9 @@ export default function ProfessionalDashboardPage() {
   useEffect(() => {
     if (status !== 'authenticated' || session?.user.role !== 'PROFESSIONAL') return;
     load();
+    fetch('/api/businesses')
+      .then((res) => res.json())
+      .then((data) => setBusinessOptions(Array.isArray(data) ? data : []));
   }, [status, session]);
 
   async function confirmBooking(id: string) {
@@ -109,6 +124,35 @@ export default function ProfessionalDashboardPage() {
     });
     setSaving(false);
     if (res.ok) setSaved(true);
+  }
+
+  async function handleChangeBusiness() {
+    if (!profileId || !newBusinessId) return;
+    const target = businessOptions.find((b) => b.id === newBusinessId);
+    if (!target) return;
+    if (!confirm(`¿Confirmas que ahora trabajas en "${target.name}"? Tus servicios y horario te acompañan.`)) {
+      return;
+    }
+
+    setChangingBusiness(true);
+    setBusinessChangeError('');
+    setBusinessChangeSaved(false);
+    const res = await fetch(`/api/professionals/${profileId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ businessId: newBusinessId }),
+    });
+    const data = await res.json().catch(() => null);
+    setChangingBusiness(false);
+
+    if (!res.ok) {
+      setBusinessChangeError(data?.error ?? 'No se pudo cambiar de local');
+      return;
+    }
+
+    setNewBusinessId('');
+    setBusinessChangeSaved(true);
+    load();
   }
 
   if (status === 'loading') return null;
@@ -226,6 +270,46 @@ export default function ProfessionalDashboardPage() {
           )}
         </Link>
       </div>
+
+      {profile && businessOptions.length > 1 && (
+        <div className="card mt-8 p-5">
+          <h2 className="font-display text-lg font-semibold text-ink">Cambiar de local</h2>
+          <p className="mt-1 text-sm text-ink/60">
+            ¿Dejaste tu local actual y ahora trabajas en otro? Selecciónalo aquí — tus servicios y horario
+            te acompañan.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <select
+              className="input max-w-xs"
+              value={newBusinessId}
+              onChange={(e) => {
+                setNewBusinessId(e.target.value);
+                setBusinessChangeSaved(false);
+                setBusinessChangeError('');
+              }}
+            >
+              <option value="">Selecciona un local…</option>
+              {businessOptions
+                .filter((b) => b.id !== profile.business.id)
+                .map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                    {b.location ? ` — ${b.location}` : ''}
+                  </option>
+                ))}
+            </select>
+            <button
+              onClick={handleChangeBusiness}
+              disabled={!newBusinessId || changingBusiness}
+              className="btn-secondary py-2 text-sm"
+            >
+              {changingBusiness ? 'Cambiando…' : 'Cambiar de local'}
+            </button>
+          </div>
+          {businessChangeError && <p className="mt-2 text-sm text-moss-600">{businessChangeError}</p>}
+          {businessChangeSaved && <p className="mt-2 text-sm text-clay-600">Local actualizado ✓</p>}
+        </div>
+      )}
 
       <div className="card mt-8 p-5">
         <h2 className="font-display text-lg font-semibold text-ink">Perfil público</h2>

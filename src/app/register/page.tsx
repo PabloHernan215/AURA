@@ -4,6 +4,13 @@ import { Suspense, useEffect, useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+
+// Leaflet needs `window`, so it's only ever loaded in the browser.
+const AddressMapPicker = dynamic(() => import('@/components/AddressMapPicker'), {
+  ssr: false,
+  loading: () => <p className="mt-2 text-xs text-ink/40">Cargando mapa…</p>,
+});
 
 interface BusinessOption {
   id: string;
@@ -29,6 +36,7 @@ function RegisterForm() {
   const [whatsapp, setWhatsapp] = useState('+593 ');
   const [businessName, setBusinessName] = useState('');
   const [businessLocation, setBusinessLocation] = useState('');
+  const [businessCoords, setBusinessCoords] = useState<{ latitude: number; longitude: number } | null>(null);
   const [businessId, setBusinessId] = useState('');
   const [businesses, setBusinesses] = useState<BusinessOption[]>([]);
   const [error, setError] = useState('');
@@ -57,6 +65,8 @@ function RegisterForm() {
         whatsapp,
         businessName,
         businessLocation,
+        businessLatitude: businessCoords?.latitude,
+        businessLongitude: businessCoords?.longitude,
         businessId,
       }),
     });
@@ -181,12 +191,18 @@ function RegisterForm() {
                   required
                   className="input"
                   value={businessLocation}
-                  onChange={(e) => setBusinessLocation(e.target.value)}
+                  onChange={(e) => {
+                    setBusinessLocation(e.target.value);
+                    setBusinessCoords(null);
+                  }}
                   placeholder="Calle, número, colonia, ciudad"
                 />
                 <p className="mt-1 text-xs text-ink/40">
                   Usa una dirección real y completa — así los clientes ven qué tan cerca están de ti.
                 </p>
+                <div className="mt-2">
+                  <AddressMapPicker address={businessLocation} onChange={setBusinessCoords} />
+                </div>
               </div>
             </>
           )}

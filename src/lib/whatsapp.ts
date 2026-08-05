@@ -138,3 +138,25 @@ export async function notifyClientOfConfirmedBooking(data: BookingConfirmedNotif
   const result = await sendWhatsAppMessage(data.clientWhatsapp, message);
   return result.success;
 }
+
+interface BusinessApprovedNotification {
+  ownerWhatsapp: string;
+  ownerName: string;
+  businessName: string;
+}
+
+/**
+ * Notifies a business owner that their local was approved and is now live on AURA.
+ * Never throws — a failure here never affects the approval, which is already saved.
+ */
+export async function notifyBusinessApproved(data: BusinessApprovedNotification): Promise<boolean> {
+  if (!data.ownerWhatsapp) return false;
+
+  const message =
+    `¡Hola ${data.ownerName}! 🎉 Tu local *${data.businessName}* fue aprobado en *AURA*.\n\n` +
+    `Ya es visible para los clientes y puede recibir reservas. Entra a tu panel para completar tu perfil, ` +
+    `agregar profesionales y empezar a recibir citas.`;
+
+  const result = await sendWhatsAppMessage(data.ownerWhatsapp, message);
+  return result.success;
+}

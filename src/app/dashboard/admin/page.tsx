@@ -1,9 +1,10 @@
 'use client';
 
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Avatar from '@/components/Avatar';
+import { resizeImageToBase64 } from '@/lib/image';
 
 interface UserItem {
   id: string;
@@ -48,7 +49,9 @@ interface AdminBusiness {
   name: string;
   description: string;
   location: string | null;
+  whatsapp: string;
   photoUrl: string | null;
+  photos: string[];
   isApproved: boolean;
   createdAt: string;
   owner: { name: string; email: string; isActive: boolean };
@@ -154,6 +157,25 @@ export default function AdminDashboardPage() {
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState('');
+
+  const [editingBusinessId, setEditingBusinessId] = useState<string | null>(null);
+  const [businessEditForm, setBusinessEditForm] = useState({
+    name: '',
+    description: '',
+    location: '',
+    whatsapp: '',
+    photoUrl: '' as string | null,
+    photos: [] as string[],
+  });
+  const [savingBusinessEdit, setSavingBusinessEdit] = useState(false);
+  const [businessEditError, setBusinessEditError] = useState('');
+  const [uploadingBusinessPhoto, setUploadingBusinessPhoto] = useState(false);
+  const [businessPhotoError, setBusinessPhotoError] = useState('');
+  const [uploadingBusinessGalleryPhoto, setUploadingBusinessGalleryPhoto] = useState(false);
+  const [businessGalleryError, setBusinessGalleryError] = useState('');
+  const businessPhotoInputRef = useRef<HTMLInputElement>(null);
+  const businessGalleryInputRef = useRef<HTMLInputElement>(null);
+  const MAX_BUSINESS_GALLERY_PHOTOS = 5;
 
   function load() {
     setLoading(true);
@@ -268,6 +290,107 @@ export default function AdminDashboardPage() {
     load();
   }
 
+  function startBusinessEdit(b: AdminBusiness) {
+    setBusinessEditError('');
+    setBusinessPhotoError('');
+    setBusinessGalleryError('');
+    setEditingBusinessId(b.id);
+    setBusinessEditForm({
+      name: b.name,
+      description: b.description,
+      location: b.location ?? '',
+      whatsapp: b.whatsapp,
+      photoUrl: b.photoUrl,
+      photos: Array.isArray(b.photos) ? b.photos : [],
+    });
+  }
+
+  async function handleBusinessPhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBusinessPhotoError('');
+
+    if (!file.type.startsWith('image/')) {
+      setBusinessPhotoError('Selecciona un archivo de imagen (JPG, PNG, etc.)');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setBusinessPhotoError('La imagen es muy pesada. Intenta con una de menos de 8 MB.');
+      return;
+    }
+
+    setUploadingBusinessPhoto(true);
+    try {
+      const resized = await resizeImageToBase64(file, 800, 0.82);
+      setBusinessEditForm((f) => ({ ...f, photoUrl: resized }));
+    } catch {
+      setBusinessPhotoError('No se pudo procesar la imagen. Intenta con otra.');
+    } finally {
+      setUploadingBusinessPhoto(false);
+    }
+  }
+
+  async function handleBusinessGalleryPhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBusinessGalleryError('');
+
+    if (!file.type.startsWith('image/')) {
+      setBusinessGalleryError('Selecciona un archivo de imagen (JPG, PNG, etc.)');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setBusinessGalleryError('La imagen es muy pesada. Intenta con una de menos de 8 MB.');
+      return;
+    }
+    if (businessEditForm.photos.length >= MAX_BUSINESS_GALLERY_PHOTOS) {
+      setBusinessGalleryError(`Ya tiene ${MAX_BUSINESS_GALLERY_PHOTOS} fotos. Elimina una para agregar otra.`);
+      return;
+    }
+
+    setUploadingBusinessGalleryPhoto(true);
+    try {
+      const resized = await resizeImageToBase64(file, 800, 0.82);
+      setBusinessEditForm((f) => ({ ...f, photos: [...f.photos, resized] }));
+    } catch {
+      setBusinessGalleryError('No se pudo procesar la imagen. Intenta con otra.');
+    } finally {
+      setUploadingBusinessGalleryPhoto(false);
+      if (businessGalleryInputRef.current) businessGalleryInputRef.current.value = '';
+    }
+  }
+
+  function removeBusinessGalleryPhoto(index: number) {
+    setBusinessEditForm((f) => ({ ...f, photos: f.photos.filter((_, i) => i !== index) }));
+  }
+
+  async function saveBusinessEdit(businessId: string) {
+    setSavingBusinessEdit(true);
+    setBusinessEditError('');
+    const res = await fetch(`/api/businesses/${businessId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: businessEditForm.name,
+        description: businessEditForm.description,
+        location: businessEditForm.location,
+        whatsapp: businessEditForm.whatsapp,
+        photoUrl: businessEditForm.photoUrl ?? '',
+        photos: businessEditForm.photos,
+      }),
+    });
+    setSavingBusinessEdit(false);
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      setBusinessEditError(data?.error ?? 'No se pudo guardar');
+      return;
+    }
+
+    setEditingBusinessId(null);
+    load();
+  }
+
   async function saveSettings() {
     setSavingSettings(true);
     setSettingsSaved(false);
@@ -278,6 +401,138 @@ export default function AdminDashboardPage() {
     });
     setSavingSettings(false);
     if (res.ok) setSettingsSaved(true);
+  }
+
+  function renderBusinessEditForm() {
+    return (
+      <div className="mt-4 space-y-4 border-t border-ink/8 pt-4">
+        <div>
+          <label className="label">Foto de portada</label>
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-sand">
+              {businessEditForm.photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={businessEditForm.photoUrl} alt="Vista previa" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-ink/30">🏠</div>
+              )}
+            </div>
+            <div>
+              <button
+                type="button"
+                onClick={() => businessPhotoInputRef.current?.click()}
+                disabled={uploadingBusinessPhoto}
+                className="btn-secondary py-1.5 text-xs"
+              >
+                {uploadingBusinessPhoto ? 'Procesando…' : 'Cambiar foto'}
+              </button>
+              <input
+                ref={businessPhotoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleBusinessPhotoChange}
+              />
+              {businessPhotoError && <p className="mt-1 text-xs text-moss-600">{businessPhotoError}</p>}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label className="label">
+            Fotos del local ({businessEditForm.photos.length}/{MAX_BUSINESS_GALLERY_PHOTOS})
+          </label>
+          <div className="mt-2 flex flex-wrap gap-3">
+            {businessEditForm.photos.map((p, i) => (
+              <div key={i} className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-sand">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p} alt={`Foto ${i + 1}`} className="h-full w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeBusinessGalleryPhoto(i)}
+                  className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100"
+                  aria-label={`Quitar foto ${i + 1}`}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+            {businessEditForm.photos.length < MAX_BUSINESS_GALLERY_PHOTOS && (
+              <button
+                type="button"
+                onClick={() => businessGalleryInputRef.current?.click()}
+                disabled={uploadingBusinessGalleryPhoto}
+                className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-dashed border-ink/20 text-xs font-medium text-ink/50 hover:border-moss-300 hover:text-moss-600"
+              >
+                {uploadingBusinessGalleryPhoto ? '…' : '+ Agregar'}
+              </button>
+            )}
+            <input
+              ref={businessGalleryInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleBusinessGalleryPhotoChange}
+            />
+          </div>
+          {businessGalleryError && <p className="mt-1 text-xs text-moss-600">{businessGalleryError}</p>}
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="label">Nombre del local</label>
+            <input
+              className="input"
+              value={businessEditForm.name}
+              onChange={(e) => setBusinessEditForm((f) => ({ ...f, name: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label className="label">WhatsApp del local</label>
+            <input
+              type="tel"
+              className="input"
+              value={businessEditForm.whatsapp}
+              onChange={(e) => setBusinessEditForm((f) => ({ ...f, whatsapp: e.target.value }))}
+              placeholder="+593 99 123 4567"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="label">Dirección</label>
+            <input
+              className="input"
+              value={businessEditForm.location}
+              onChange={(e) => setBusinessEditForm((f) => ({ ...f, location: e.target.value }))}
+            />
+            <p className="mt-1 text-xs text-ink/40">Si la cambias, se recalcula la ubicación automáticamente.</p>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="label">Descripción</label>
+            <textarea
+              className="input"
+              rows={2}
+              value={businessEditForm.description}
+              onChange={(e) => setBusinessEditForm((f) => ({ ...f, description: e.target.value }))}
+            />
+          </div>
+        </div>
+
+        {businessEditError && <p className="text-sm text-moss-600">{businessEditError}</p>}
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => saveBusinessEdit(editingBusinessId!)}
+            disabled={savingBusinessEdit}
+            className="btn-primary py-2 text-sm"
+          >
+            {savingBusinessEdit ? 'Guardando…' : 'Guardar cambios'}
+          </button>
+          <button onClick={() => setEditingBusinessId(null)} className="btn-secondary py-2 text-sm">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (status === 'loading') return null;
@@ -361,11 +616,18 @@ export default function AdminDashboardPage() {
                             </div>
                           </div>
                           <div className="flex gap-2">
+                            <button
+                              onClick={() => (editingBusinessId === b.id ? setEditingBusinessId(null) : startBusinessEdit(b))}
+                              className="btn-secondary py-2 text-sm"
+                            >
+                              {editingBusinessId === b.id ? 'Cerrar' : 'Editar'}
+                            </button>
                             <button onClick={() => setApproval(b.id, true)} className="btn-primary py-2 text-sm">
                               Aprobar
                             </button>
                           </div>
                         </div>
+                        {editingBusinessId === b.id && renderBusinessEditForm()}
                       </div>
                     ))}
                   </div>
@@ -377,20 +639,31 @@ export default function AdminDashboardPage() {
                   <h2 className="font-display text-lg font-semibold text-ink">Ya aprobados</h2>
                   <div className="mt-4 space-y-2">
                     {approvedBusinesses.map((b) => (
-                      <div key={b.id} className="card flex flex-wrap items-center justify-between gap-3 p-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar name={b.name} photoUrl={b.photoUrl} size="sm" />
-                          <div>
-                            <p className="font-medium text-ink">{b.name}</p>
-                            <p className="text-sm text-ink/50">{b.owner.name} · {b.owner.email}</p>
+                      <div key={b.id} className="card p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex items-center gap-3">
+                            <Avatar name={b.name} photoUrl={b.photoUrl} size="sm" />
+                            <div>
+                              <p className="font-medium text-ink">{b.name}</p>
+                              <p className="text-sm text-ink/50">{b.owner.name} · {b.owner.email}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <button
+                              onClick={() => (editingBusinessId === b.id ? setEditingBusinessId(null) : startBusinessEdit(b))}
+                              className="text-xs font-semibold text-clay-600 hover:underline"
+                            >
+                              {editingBusinessId === b.id ? 'Cerrar' : 'Editar'}
+                            </button>
+                            <button
+                              onClick={() => setApproval(b.id, false)}
+                              className="text-xs font-semibold text-moss-600 hover:underline"
+                            >
+                              Revocar aprobación
+                            </button>
                           </div>
                         </div>
-                        <button
-                          onClick={() => setApproval(b.id, false)}
-                          className="text-xs font-semibold text-moss-600 hover:underline"
-                        >
-                          Revocar aprobación
-                        </button>
+                        {editingBusinessId === b.id && renderBusinessEditForm()}
                       </div>
                     ))}
                   </div>

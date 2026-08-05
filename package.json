@@ -17,6 +17,7 @@
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
+    "framer-motion": "^12.43.0",
     "leaflet": "^1.9.4",
     "next": "14.2.15",
     "next-auth": "^4.24.7",

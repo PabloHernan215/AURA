@@ -42,9 +42,29 @@ const config: Config = {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.4' },
         },
+        auraShift: {
+          '0%, 100%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '50%': { transform: 'translate(2%, -4%) scale(1.06)' },
+        },
+        floatSlow: {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)' },
+          '50%': { transform: 'translate(-3%, 3%) scale(1.04)' },
+        },
+        ctaGlow: {
+          '0%, 100%': { transform: 'scale(1)', boxShadow: '0 0 0 0 rgba(95,107,76,0.35)' },
+          '50%': { transform: 'scale(1.015)', boxShadow: '0 0 0 12px rgba(95,107,76,0)' },
+        },
       },
       animation: {
         pulseSoft: 'pulseSoft 2s ease-in-out infinite',
+        auraShift: 'auraShift 40s ease-in-out infinite',
+        float: 'float 16s ease-in-out infinite',
+        floatSlow: 'floatSlow 22s ease-in-out infinite',
+        ctaGlow: 'ctaGlow 3.2s ease-in-out infinite',
       },
     },
   },

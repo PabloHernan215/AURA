@@ -5,6 +5,10 @@ import HomeHero from '@/components/HomeHero';
 import Reveal from '@/components/motion/Reveal';
 import CountUp from '@/components/motion/CountUp';
 
+// Without this, Next prerenders "/" as a static page at build time — an admin
+// approving/revoking a business wouldn't show up here until the next deploy.
+export const dynamic = 'force-dynamic';
+
 const CATEGORIES = [
   {
     name: 'Cabello',

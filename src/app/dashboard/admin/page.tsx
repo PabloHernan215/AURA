@@ -58,6 +58,14 @@ interface AdminBusiness {
   professionals: { id: string }[];
 }
 
+interface AdminBusinessChange {
+  id: string;
+  createdAt: string;
+  professional: { user: { name: string } };
+  oldBusiness: { name: string; owner: { name: string; whatsapp: string } };
+  newBusiness: { name: string; owner: { name: string; whatsapp: string } };
+}
+
 interface Metrics {
   totalUsers: number;
   totalBusinesses: number;
@@ -81,11 +89,12 @@ const BOOKING_STATUS_LABELS: Record<string, string> = {
   COMPLETED: 'Completada',
 };
 
-const TAB_LABELS: Record<'pending' | 'metrics' | 'users' | 'bookings' | 'settings', string> = {
+const TAB_LABELS: Record<'pending' | 'metrics' | 'users' | 'bookings' | 'changes' | 'settings', string> = {
   pending: 'Aprobaciones',
   metrics: 'Métricas',
   users: 'Usuarios',
   bookings: 'Reservas',
+  changes: 'Cambios de local',
   settings: 'Configuración',
 };
 
@@ -123,6 +132,20 @@ function buildProfessionalMessage(b: AdminBooking): string {
   );
 }
 
+function buildOldOwnerMessage(c: AdminBusinessChange): string {
+  return (
+    `Hola ${c.oldBusiness.owner.name}, te informamos que ${c.professional.user.name} ya no trabaja en ` +
+    `${c.oldBusiness.name} — ahora forma parte del equipo de ${c.newBusiness.name}. — AURA`
+  );
+}
+
+function buildNewOwnerMessage(c: AdminBusinessChange): string {
+  return (
+    `Hola ${c.newBusiness.owner.name}, ${c.professional.user.name} se unió a tu equipo en ` +
+    `${c.newBusiness.name} (antes trabajaba en ${c.oldBusiness.name}). — AURA`
+  );
+}
+
 function waLink(phone: string, message: string): string {
   const digits = phone.replace(/[^\d]/g, '');
   // api.whatsapp.com/send is more reliable than wa.me for prefilling text on
@@ -132,10 +155,11 @@ function waLink(phone: string, message: string): string {
 
 export default function AdminDashboardPage() {
   const { data: session, status } = useSession();
-  const [tab, setTab] = useState<'pending' | 'metrics' | 'users' | 'bookings' | 'settings'>('pending');
+  const [tab, setTab] = useState<'pending' | 'metrics' | 'users' | 'bookings' | 'changes' | 'settings'>('pending');
   const [users, setUsers] = useState<UserItem[]>([]);
   const [businesses, setBusinesses] = useState<AdminBusiness[]>([]);
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
+  const [businessChanges, setBusinessChanges] = useState<AdminBusinessChange[]>([]);
   const [newBookingsCount, setNewBookingsCount] = useState(0);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [paymentMethods, setPaymentMethods] = useState('');
@@ -184,14 +208,16 @@ export default function AdminDashboardPage() {
       fetch('/api/admin/bookings').then((r) => r.json()),
       fetch('/api/admin/businesses').then((r) => r.json()),
       fetch('/api/admin/settings').then((r) => r.json()),
+      fetch('/api/admin/business-changes').then((r) => r.json()),
     ])
-      .then(([usersData, bookingsData, businessesData, settingsData]) => {
+      .then(([usersData, bookingsData, businessesData, settingsData, businessChangesData]) => {
         setUsers(usersData);
         setBookings(bookingsData.bookings ?? []);
         setNewBookingsCount(bookingsData.newBookingsCount ?? 0);
         setMetrics(bookingsData.metrics ?? null);
         setBusinesses(businessesData);
         setPaymentMethods(settingsData.paymentMethods ?? '');
+        setBusinessChanges(Array.isArray(businessChangesData) ? businessChangesData : []);
       })
       .finally(() => setLoading(false));
   }
@@ -556,7 +582,7 @@ export default function AdminDashboardPage() {
       <h1 className="font-display text-2xl font-semibold text-ink">Panel de administración</h1>
 
       <div className="mt-4 flex gap-2">
-        {(['pending', 'metrics', 'users', 'bookings', 'settings'] as const).map((t) => (
+        {(['pending', 'metrics', 'users', 'bookings', 'changes', 'settings'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -952,6 +978,60 @@ export default function AdminDashboardPage() {
                   ))
                 )}
               </div>
+            </div>
+          )}
+
+          {tab === 'changes' && (
+            <div>
+              {businessChanges.length === 0 ? (
+                <p className="rounded-xl bg-sand px-4 py-6 text-center text-sm text-ink/60">
+                  Aún no hay cambios de local registrados.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {businessChanges.map((c) => (
+                    <div key={c.id} className="card flex flex-col gap-3 p-4">
+                      <div>
+                        <p className="font-medium text-ink">
+                          <span className="font-semibold">{c.professional.user.name}</span> cambió de{' '}
+                          <span className="font-semibold">{c.oldBusiness.name}</span> a{' '}
+                          <span className="font-semibold">{c.newBusiness.name}</span>
+                        </p>
+                        <p className="text-sm text-ink/50">
+                          {new Date(c.createdAt).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 border-t border-ink/8 pt-3">
+                        {c.oldBusiness.owner.whatsapp ? (
+                          <a
+                            href={waLink(c.oldBusiness.owner.whatsapp, buildOldOwnerMessage(c))}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-full bg-clay-50 px-3 py-1.5 text-xs font-semibold text-clay-600 hover:bg-clay-100"
+                          >
+                            💬 Avisar al dueño anterior ({c.oldBusiness.owner.name})
+                          </a>
+                        ) : (
+                          <span className="text-xs text-ink/30">Dueño anterior sin WhatsApp</span>
+                        )}
+                        {c.newBusiness.owner.whatsapp ? (
+                          <a
+                            href={waLink(c.newBusiness.owner.whatsapp, buildNewOwnerMessage(c))}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 rounded-full bg-moss-50 px-3 py-1.5 text-xs font-semibold text-moss-600 hover:bg-moss-100"
+                          >
+                            💬 Avisar al dueño nuevo ({c.newBusiness.owner.name})
+                          </a>
+                        ) : (
+                          <span className="text-xs text-ink/30">Dueño nuevo sin WhatsApp</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

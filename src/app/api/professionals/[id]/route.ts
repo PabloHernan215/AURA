@@ -95,10 +95,25 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       }
     }
 
+    const isBusinessSwitch = parsed.data.businessId && parsed.data.businessId !== profile.businessId;
+
     const updated = await prisma.professionalProfile.update({
       where: { id: params.id },
       data: parsed.data,
     });
+
+    if (isBusinessSwitch) {
+      // Best-effort audit trail for the admin panel — never blocks the switch itself.
+      await prisma.professionalBusinessChange
+        .create({
+          data: {
+            professionalId: params.id,
+            oldBusinessId: profile.businessId,
+            newBusinessId: parsed.data.businessId!,
+          },
+        })
+        .catch(() => {});
+    }
 
     return NextResponse.json(updated);
   } catch (e: any) {

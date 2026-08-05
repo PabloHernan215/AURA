@@ -60,6 +60,8 @@ model Business {
 
   professionals ProfessionalProfile[]
   bookings      Booking[]
+  oldBusinessChanges ProfessionalBusinessChange[] @relation("OldBusinessChanges")
+  newBusinessChanges ProfessionalBusinessChange[] @relation("NewBusinessChanges")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -84,11 +86,29 @@ model ProfessionalProfile {
   services      Service[]
   availability  Availability[]
   bookings      Booking[]      @relation("ProfessionalBookings")
+  businessChanges ProfessionalBusinessChange[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("professional_profiles")
+}
+
+// Audit trail entry created whenever a professional switches which business
+// they work at — lets the admin see it happened and notify either owner.
+model ProfessionalBusinessChange {
+  id             String   @id @default(cuid())
+  professionalId String
+  professional   ProfessionalProfile @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  oldBusinessId  String
+  oldBusiness    Business @relation("OldBusinessChanges", fields: [oldBusinessId], references: [id])
+  newBusinessId  String
+  newBusiness    Business @relation("NewBusinessChanges", fields: [newBusinessId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("professional_business_changes")
 }
 
 model Service {

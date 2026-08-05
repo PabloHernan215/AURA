@@ -79,11 +79,6 @@ function LoginForm() {
             Crea una cuenta
           </Link>
         </p>
-
-        <div className="mt-8 rounded-xl bg-sand/60 p-4 text-xs text-ink/50">
-          <p className="font-semibold text-ink/70">Cuentas de prueba (contraseña: password123)</p>
-          <p className="mt-1">client@aura.studio · maria@aura.studio · dueno1@aura.studio · admin@aura.studio</p>
-        </div>
       </div>
     </div>
   );

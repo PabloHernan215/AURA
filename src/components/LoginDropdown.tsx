@@ -25,7 +25,7 @@ export default function LoginDropdown() {
 
   if (status === 'authenticated' && session) {
     return (
-      <span className="whitespace-nowrap text-[11px] font-medium text-ink/70 sm:text-sm">
+      <span className="whitespace-nowrap rounded-full bg-ink px-3 py-1 text-[11px] font-medium text-white sm:px-4 sm:py-1.5 sm:text-xs">
         {session.user.name}
       </span>
     );
@@ -36,7 +36,7 @@ export default function LoginDropdown() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="whitespace-nowrap text-[11px] font-medium text-ink/70 hover:text-ink sm:text-sm"
+        className="whitespace-nowrap rounded-full bg-ink px-3 py-1 text-[11px] font-medium text-white transition-colors hover:bg-ink/85 sm:px-4 sm:py-1.5 sm:text-xs"
       >
         Iniciar sesión
       </button>

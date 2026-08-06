@@ -7,11 +7,9 @@ import NearbySection from '@/components/NearbySection';
 import Reveal from '@/components/motion/Reveal';
 import CountUp from '@/components/motion/CountUp';
 
-// Fotos de relleno para el banner rotativo — reemplázalas por las tuyas
-// (mismo formato { src, alt }) apenas las tengas listas.
 const BANNER_IMAGES = [
-  { src: 'https://picsum.photos/seed/aura-banner-1/1600/700', alt: 'Espacio de bienestar AURA' },
-  { src: 'https://picsum.photos/seed/aura-banner-2/1600/700', alt: 'Cuidado personal en AURA' },
+  { src: '/banner/banner-1.jpg', alt: 'Descubre, reserva y disfruta con AURA' },
+  { src: '/banner/banner-2.jpg', alt: 'Tu tiempo es valioso, tu bienestar también' },
 ];
 
 // Without this, Next prerenders "/" as a static page at build time — an admin

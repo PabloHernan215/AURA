@@ -12,9 +12,12 @@ export default function Navbar() {
           AURA
         </Link>
 
-        <div className="flex items-center gap-3 sm:gap-4">
+        <div className="flex items-center gap-1.5 sm:gap-4">
           <LoginDropdown />
-          <Link href="/register?role=BUSINESS_OWNER" className="btn-secondary py-2 text-sm">
+          <Link
+            href="/register?role=BUSINESS_OWNER"
+            className="btn-secondary whitespace-nowrap px-2.5 py-1 text-[11px] sm:px-4 sm:py-2 sm:text-sm"
+          >
             Registra tu negocio
           </Link>
           <HamburgerMenu />

@@ -33,9 +33,9 @@ export default function HamburgerMenu() {
         onClick={() => setOpen((v) => !v)}
         aria-label="Abrir menú"
         aria-expanded={open}
-        className="btn-secondary flex items-center gap-2 py-2 text-sm"
+        className="btn-secondary flex items-center gap-1 whitespace-nowrap px-2.5 py-1 text-[11px] sm:gap-2 sm:px-4 sm:py-2 sm:text-sm"
       >
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" />
         </svg>
         Menú

@@ -26,17 +26,20 @@ export default function ImageCarousel({ images, intervalMs = 5000 }: ImageCarous
 
   return (
     <div
-      className="relative mx-auto mt-4 h-64 w-full max-w-6xl overflow-hidden rounded-2xl sm:h-96"
+      className="relative mx-auto mt-4 aspect-[21/9] w-full max-w-6xl overflow-hidden rounded-2xl bg-sand"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
       {images.map((img, i) => (
+        // Contain (not cover) so wide banners never get cropped on narrow
+        // screens — any image that isn't exactly 21:9 just letterboxes
+        // instead of losing its edges.
         // eslint-disable-next-line @next/next/no-img-element
         <img
           key={img.src}
           src={img.src}
           alt={img.alt}
-          className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ease-in-out ${
+          className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-1000 ease-in-out ${
             i === index ? 'opacity-100' : 'opacity-0'
           }`}
         />

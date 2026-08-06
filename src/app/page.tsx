@@ -2,15 +2,9 @@ import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import BusinessCard from '@/components/BusinessCard';
 import HomeHero from '@/components/HomeHero';
-import ImageCarousel from '@/components/ImageCarousel';
 import NearbySection from '@/components/NearbySection';
 import Reveal from '@/components/motion/Reveal';
 import CountUp from '@/components/motion/CountUp';
-
-const BANNER_IMAGES = [
-  { src: '/banner/banner-1.jpg', alt: 'Descubre, reserva y disfruta con AURA' },
-  { src: '/banner/banner-2.jpg', alt: 'Tu tiempo es valioso, tu bienestar también' },
-];
 
 // Without this, Next prerenders "/" as a static page at build time — an admin
 // approving/revoking a business wouldn't show up here until the next deploy.
@@ -126,8 +120,6 @@ export default async function LandingPage() {
   return (
     <div>
       <HomeHero />
-
-      <ImageCarousel images={BANNER_IMAGES} />
 
       <NearbySection />
 

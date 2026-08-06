@@ -18,9 +18,6 @@ export default function SearchBar() {
   const router = useRouter();
   const [treatment, setTreatment] = useState('All');
   const [location, setLocation] = useState('');
-  // Fecha/hora es solo visual por ahora — /locales no filtra por fecha todavía,
-  // así que no se envía en la búsqueda (evita prometer un filtro que no existe).
-  const [when, setWhen] = useState('');
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -52,7 +49,7 @@ export default function SearchBar() {
         </select>
       </div>
 
-      <div className="flex-1 border-b border-ink/8 px-5 py-2.5 sm:border-b-0 sm:border-r sm:border-ink/10">
+      <div className="flex-1 px-5 py-2.5">
         <label className="block text-left text-[10px] font-semibold uppercase tracking-wide text-stone">
           Ubicación
         </label>
@@ -61,18 +58,6 @@ export default function SearchBar() {
           onChange={(e) => setLocation(e.target.value)}
           placeholder="Tu dirección o zona"
           className="w-full bg-transparent text-sm text-ink placeholder:text-ink/30 focus:outline-none"
-        />
-      </div>
-
-      <div className="flex-1 px-5 py-2.5">
-        <label className="block text-left text-[10px] font-semibold uppercase tracking-wide text-stone">
-          Fecha y hora
-        </label>
-        <input
-          type="datetime-local"
-          value={when}
-          onChange={(e) => setWhen(e.target.value)}
-          className="w-full bg-transparent text-sm text-ink focus:outline-none"
         />
       </div>
 

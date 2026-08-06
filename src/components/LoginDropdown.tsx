@@ -28,7 +28,7 @@ export default function LoginDropdown() {
   }
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative" ref={ref} onMouseLeave={() => setOpen(false)}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -37,7 +37,7 @@ export default function LoginDropdown() {
         Iniciar sesión
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-xl border border-ink/8 bg-white p-2 shadow-lg">
+        <div className="absolute left-1/2 top-full z-50 mt-2 w-56 -translate-x-1/2 rounded-xl border border-ink/8 bg-white p-2 shadow-lg">
           <p className="px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide text-stone">
             Elige tu tipo de cuenta
           </p>

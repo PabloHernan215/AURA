@@ -3,10 +3,16 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SearchBar from '@/components/SearchBar';
+import ImageCarousel from '@/components/ImageCarousel';
 import CountUp from '@/components/motion/CountUp';
 
 const ROTATING_WORDS = ['Cabello', 'Uñas', 'Cejas y pestañas', 'Bienestar'];
 const ROTATE_MS = 2200;
+
+const BANNER_IMAGES = [
+  { src: '/banner/banner-1.jpg', alt: 'Descubre, reserva y disfruta con AURA' },
+  { src: '/banner/banner-2.jpg', alt: 'Tu tiempo es valioso, tu bienestar también' },
+];
 
 export default function HomeHero() {
   const [wordIndex, setWordIndex] = useState(0);
@@ -33,12 +39,21 @@ export default function HomeHero() {
         <div className="absolute left-1/3 bottom-0 h-64 w-64 rounded-full bg-moss-100/40 blur-3xl animate-float" />
       </div>
 
-      <div className="mx-auto max-w-3xl px-5 pb-16 pt-16 text-center sm:pt-24">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="px-5 pt-10 sm:pt-14"
+      >
+        <ImageCarousel images={BANNER_IMAGES} />
+      </motion.div>
+
+      <div className="mx-auto max-w-3xl px-5 pb-16 pt-8 text-center">
         <motion.span
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-5 inline-block text-xs font-medium uppercase tracking-[0.15em] text-stone"
+          transition={{ duration: 0.5, delay: 0.06 }}
+          className="mb-3 mt-8 inline-block text-[11px] font-medium uppercase tracking-[0.15em] text-stone"
         >
           Cuidado personal, belleza y bienestar
         </motion.span>
@@ -46,13 +61,13 @@ export default function HomeHero() {
         <motion.div
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.08 }}
-          className="mx-auto flex w-fit items-center gap-2.5 rounded-full bg-moss-50 px-6 py-3 text-base font-medium text-moss-600 shadow-sm sm:text-lg"
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="mx-auto flex w-fit items-center gap-1.5 rounded-full bg-moss-50 px-3.5 py-1.5 text-xs font-medium text-moss-600 shadow-sm"
         >
-          <span className="h-2 w-2 rounded-full bg-moss-500 animate-pulseSoft" />
-          <span className="inline-flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 rounded-full bg-moss-500 animate-pulseSoft" />
+          <span className="inline-flex items-center gap-1">
             Especialistas en
-            <span className="relative inline-block min-w-[7.5ch] text-left sm:min-w-[9ch]">
+            <span className="relative inline-block min-w-[6.5ch] text-left">
               <AnimatePresence mode="wait">
                 <motion.span
                   key={ROTATING_WORDS[wordIndex]}
@@ -74,22 +89,10 @@ export default function HomeHero() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.16 }}
-          className="mt-7 font-display text-4xl font-medium leading-[1.1] text-ink sm:text-6xl"
+          className="mt-6 font-display text-4xl font-medium leading-[1.1] text-ink sm:text-6xl"
         >
-          Un momento para ti,
-          <br />
-          <span className="italic text-moss-500">reservado en segundos.</span>
+          Reserva tus servicios de <span className="italic text-moss-500">cuidado personal.</span>
         </motion.h1>
-
-        <motion.p
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.24 }}
-          className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-ink/60"
-        >
-          AURA te conecta con especialistas en cabello, uñas y bienestar de confianza. Sin llamadas,
-          sin esperas — solo tú, eligiendo el momento perfecto para cuidarte.
-        </motion.p>
 
         <motion.div
           initial={{ opacity: 0, y: 16 }}

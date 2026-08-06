@@ -1,19 +1,27 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import HeroSearch from '@/components/HeroSearch';
+import SearchBar from '@/components/SearchBar';
+import CountUp from '@/components/motion/CountUp';
 
 const ROTATING_WORDS = ['Cabello', 'Uñas', 'Cejas y pestañas', 'Bienestar'];
 const ROTATE_MS = 2200;
 
 export default function HomeHero() {
   const [wordIndex, setWordIndex] = useState(0);
+  const [todayCount, setTodayCount] = useState<number | null>(null);
 
   useEffect(() => {
     const id = setInterval(() => setWordIndex((i) => (i + 1) % ROTATING_WORDS.length), ROTATE_MS);
     return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/bookings/today-count')
+      .then((res) => res.json())
+      .then((data) => setTodayCount(typeof data.count === 'number' ? data.count : 0))
+      .catch(() => setTodayCount(0));
   }, []);
 
   return (
@@ -25,112 +33,101 @@ export default function HomeHero() {
         <div className="absolute left-1/3 bottom-0 h-64 w-64 rounded-full bg-moss-100/40 blur-3xl animate-float" />
       </div>
 
-      <div className="mx-auto max-w-6xl px-5 pb-20 pt-16 sm:pt-24">
-        <div className="mb-10 flex flex-col items-center text-center sm:mb-14">
-          <motion.span
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="mb-5 inline-block text-xs font-medium uppercase tracking-[0.15em] text-stone"
-          >
-            Cuidado personal, belleza y bienestar
-          </motion.span>
+      <div className="mx-auto max-w-3xl px-5 pb-16 pt-16 text-center sm:pt-24">
+        <motion.span
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-5 inline-block text-xs font-medium uppercase tracking-[0.15em] text-stone"
+        >
+          Cuidado personal, belleza y bienestar
+        </motion.span>
 
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.08 }}
-            className="inline-flex items-center gap-2.5 rounded-full bg-moss-50 px-6 py-3 text-base font-medium text-moss-600 shadow-sm sm:text-lg"
-          >
-            <span className="h-2 w-2 rounded-full bg-moss-500 animate-pulseSoft" />
-            <span className="inline-flex items-center gap-1.5">
-              Especialistas en
-              <span className="relative inline-block min-w-[7.5ch] text-left sm:min-w-[9ch]">
-                <AnimatePresence mode="wait">
-                  <motion.span
-                    key={ROTATING_WORDS[wordIndex]}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -8 }}
-                    transition={{ duration: 0.3 }}
-                    className="inline-block font-semibold"
-                  >
-                    {ROTATING_WORDS[wordIndex]}
-                  </motion.span>
-                </AnimatePresence>
-              </span>
-              cerca de ti
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.08 }}
+          className="mx-auto flex w-fit items-center gap-2.5 rounded-full bg-moss-50 px-6 py-3 text-base font-medium text-moss-600 shadow-sm sm:text-lg"
+        >
+          <span className="h-2 w-2 rounded-full bg-moss-500 animate-pulseSoft" />
+          <span className="inline-flex items-center gap-1.5">
+            Especialistas en
+            <span className="relative inline-block min-w-[7.5ch] text-left sm:min-w-[9ch]">
+              <AnimatePresence mode="wait">
+                <motion.span
+                  key={ROTATING_WORDS[wordIndex]}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.3 }}
+                  className="inline-block font-semibold"
+                >
+                  {ROTATING_WORDS[wordIndex]}
+                </motion.span>
+              </AnimatePresence>
             </span>
-          </motion.div>
-        </div>
+            cerca de ti
+          </span>
+        </motion.div>
 
-        <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-16">
-          <div>
-            <motion.h1
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.16 }}
-              className="font-display text-[2.75rem] font-medium leading-[1.1] text-ink sm:text-6xl"
-            >
-              Un momento
-              <br />
-              para ti,
-              <br />
-              <span className="italic text-moss-500">reservado en segundos.</span>
-            </motion.h1>
+        <motion.h1
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.16 }}
+          className="mt-7 font-display text-4xl font-medium leading-[1.1] text-ink sm:text-6xl"
+        >
+          Un momento para ti,
+          <br />
+          <span className="italic text-moss-500">reservado en segundos.</span>
+        </motion.h1>
 
-            <motion.p
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.24 }}
-              className="mt-6 max-w-md text-base leading-relaxed text-ink/60"
-            >
-              AURA te conecta con especialistas en cabello, uñas y bienestar de confianza.
-              Sin llamadas, sin esperas — solo tú, eligiendo el momento perfecto para cuidarte.
-            </motion.p>
+        <motion.p
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.24 }}
+          className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-ink/60"
+        >
+          AURA te conecta con especialistas en cabello, uñas y bienestar de confianza. Sin llamadas,
+          sin esperas — solo tú, eligiendo el momento perfecto para cuidarte.
+        </motion.p>
 
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.32 }}
-              className="mt-9 flex flex-wrap items-center gap-5"
-            >
-              <Link href="/locales" className="btn-primary animate-ctaGlow">
-                Reservar mi cita
-              </Link>
-              <Link
-                href="/register?role=PROFESSIONAL"
-                className="text-sm font-medium text-ink/60 underline decoration-stone-light underline-offset-4 hover:text-ink"
-              >
-                Soy profesional
-              </Link>
-              <Link
-                href="/register?role=BUSINESS_OWNER"
-                className="text-sm font-medium text-ink/60 underline decoration-stone-light underline-offset-4 hover:text-ink"
-              >
-                Registrar un local
-              </Link>
-            </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.32 }}
+          className="mt-9"
+        >
+          <SearchBar />
+        </motion.div>
 
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.6, delay: 0.4 }}
-              className="mt-5 text-xs text-stone"
-            >
-              Reserva en menos de un minuto · Sin registros complicados · Cancela cuando quieras
-            </motion.p>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 24 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="relative"
+        {todayCount !== null && todayCount > 0 && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="mt-5 text-sm font-medium text-moss-600"
           >
-            <HeroSearch />
-          </motion.div>
-        </div>
+            <CountUp value={todayCount} /> {todayCount === 1 ? 'cita reservada hoy' : 'citas reservadas hoy'}
+          </motion.p>
+        )}
+
+        <motion.button
+          type="button"
+          title="Próximamente"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.6, delay: 0.48 }}
+          className="btn-secondary mx-auto mt-6 inline-flex items-center gap-2 text-sm"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <path d="M14 14h3v3h-3zM18 18h3v3h-3zM14 21h3M21 14v3" strokeLinecap="round" />
+          </svg>
+          Obtener la app
+          <span className="text-xs text-ink/40">(Próximamente)</span>
+        </motion.button>
       </div>
     </section>
   );

@@ -5,10 +5,19 @@ import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
+const ROLE_TITLES: Record<string, string> = {
+  professional: 'Inicia sesión como profesional',
+  client: 'Inicia sesión como cliente',
+  business: 'Inicia sesión como dueño de negocio',
+};
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '/';
+  // Purely cosmetic — AURA has a single login flow for every role, the account's
+  // role already lives in the database. This only changes the heading shown.
+  const title = ROLE_TITLES[searchParams.get('as') ?? ''] ?? 'Bienvenido de nuevo';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -39,7 +48,7 @@ function LoginForm() {
   return (
     <div className="mx-auto flex min-h-[80vh] max-w-md items-center px-5">
       <div className="w-full">
-        <h1 className="font-display text-3xl font-semibold text-ink">Bienvenido de nuevo</h1>
+        <h1 className="font-display text-3xl font-semibold text-ink">{title}</h1>
         <p className="mt-1 text-sm text-ink/60">Inicia sesión para reservar o gestionar tus citas.</p>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">

@@ -2,8 +2,17 @@ import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import BusinessCard from '@/components/BusinessCard';
 import HomeHero from '@/components/HomeHero';
+import ImageCarousel from '@/components/ImageCarousel';
+import NearbySection from '@/components/NearbySection';
 import Reveal from '@/components/motion/Reveal';
 import CountUp from '@/components/motion/CountUp';
+
+// Fotos de relleno para el banner rotativo — reemplázalas por las tuyas
+// (mismo formato { src, alt }) apenas las tengas listas.
+const BANNER_IMAGES = [
+  { src: 'https://picsum.photos/seed/aura-banner-1/1600/700', alt: 'Espacio de bienestar AURA' },
+  { src: 'https://picsum.photos/seed/aura-banner-2/1600/700', alt: 'Cuidado personal en AURA' },
+];
 
 // Without this, Next prerenders "/" as a static page at build time — an admin
 // approving/revoking a business wouldn't show up here until the next deploy.
@@ -67,34 +76,108 @@ function Icon({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default async function LandingPage() {
-  const featuredBusinesses = await prisma.business.findMany({
-    where: { isApproved: true, owner: { isActive: true } },
-    include: { professionals: { select: { specialties: true, services: { select: { price: true }, where: { isActive: true } } } } },
-    orderBy: { ratingAvg: 'desc' },
-    take: 10,
-  });
+function toCardProps(b: {
+  id: string;
+  name: string;
+  photoUrl: string | null;
+  location: string | null;
+  ratingAvg: number;
+  ratingCount: number;
+  professionals: { specialties: string; services: { price: number }[] }[];
+}) {
+  const allPrices = b.professionals.flatMap((p) => p.services.map((s) => s.price));
+  const specialties = Array.from(
+    new Set(b.professionals.flatMap((p) => p.specialties.split(',').map((s) => s.trim()).filter(Boolean)))
+  ).join(',');
+  return {
+    id: b.id,
+    name: b.name,
+    photoUrl: b.photoUrl,
+    specialties,
+    location: b.location,
+    ratingAvg: b.ratingAvg,
+    ratingCount: b.ratingCount,
+    startingPrice: allPrices.length ? Math.min(...allPrices) : null,
+  };
+}
 
-  const featured = featuredBusinesses.map((b) => {
-    const allPrices = b.professionals.flatMap((p) => p.services.map((s) => s.price));
-    const specialties = Array.from(
-      new Set(b.professionals.flatMap((p) => p.specialties.split(',').map((s) => s.trim()).filter(Boolean)))
-    ).join(',');
-    return {
-      id: b.id,
-      name: b.name,
-      photoUrl: b.photoUrl,
-      specialties,
-      location: b.location,
-      ratingAvg: b.ratingAvg,
-      ratingCount: b.ratingCount,
-      startingPrice: allPrices.length ? Math.min(...allPrices) : null,
-    };
-  });
+export default async function LandingPage() {
+  const businessInclude = {
+    professionals: { select: { specialties: true, services: { select: { price: true }, where: { isActive: true } } } },
+  };
+  const businessWhere = { isApproved: true, owner: { isActive: true } };
+
+  const [mostVisitedBusinesses, newestBusinesses] = await Promise.all([
+    prisma.business.findMany({
+      where: businessWhere,
+      include: businessInclude,
+      orderBy: { ratingCount: 'desc' },
+      take: 3,
+    }),
+    prisma.business.findMany({
+      where: businessWhere,
+      include: businessInclude,
+      orderBy: { createdAt: 'desc' },
+      take: 3,
+    }),
+  ]);
+
+  const mostVisited = mostVisitedBusinesses.map(toCardProps);
+  const newest = newestBusinesses.map(toCardProps);
 
   return (
     <div>
       <HomeHero />
+
+      <ImageCarousel images={BANNER_IMAGES} />
+
+      <NearbySection />
+
+      {/* Los más visitados */}
+      {mostVisited.length > 0 && (
+        <section className="mx-auto max-w-6xl px-5 py-16">
+          <h2 className="font-display text-3xl font-medium text-ink">Los más visitados</h2>
+          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {mostVisited.map((b, i) => (
+              <Reveal key={b.id} delay={i * 0.08}>
+                <BusinessCard
+                  id={b.id}
+                  name={b.name}
+                  photoUrl={b.photoUrl}
+                  specialties={b.specialties}
+                  location={b.location}
+                  ratingAvg={b.ratingAvg}
+                  ratingCount={b.ratingCount}
+                  startingPrice={b.startingPrice}
+                />
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Nuevos */}
+      {newest.length > 0 && (
+        <section className="mx-auto max-w-6xl px-5 py-16">
+          <h2 className="font-display text-3xl font-medium text-ink">Nuevos</h2>
+          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {newest.map((b, i) => (
+              <Reveal key={b.id} delay={i * 0.08}>
+                <BusinessCard
+                  id={b.id}
+                  name={b.name}
+                  photoUrl={b.photoUrl}
+                  specialties={b.specialties}
+                  location={b.location}
+                  ratingAvg={b.ratingAvg}
+                  ratingCount={b.ratingCount}
+                  startingPrice={b.startingPrice}
+                />
+              </Reveal>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Categorías de servicio */}
       <section className="border-y border-ink/8 bg-white/50 py-14">
@@ -188,37 +271,6 @@ export default async function LandingPage() {
           </div>
         </Reveal>
       </section>
-
-      {/* Locales destacados */}
-      {featured.length > 0 && (
-        <section className="mx-auto max-w-6xl px-5 py-16">
-          <div className="flex items-end justify-between">
-            <div>
-              <span className="text-xs font-medium uppercase tracking-[0.15em] text-stone">Esta semana</span>
-              <h2 className="mt-2 font-display text-3xl font-medium text-ink">Los mejor calificados</h2>
-            </div>
-            <Link href="/locales" className="text-sm font-medium text-moss-600 hover:underline">
-              Ver todos →
-            </Link>
-          </div>
-          <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {featured.map((b, i) => (
-              <Reveal key={b.id} delay={(i % 3) * 0.08}>
-                <BusinessCard
-                  id={b.id}
-                  name={b.name}
-                  photoUrl={b.photoUrl}
-                  specialties={b.specialties}
-                  location={b.location}
-                  ratingAvg={b.ratingAvg}
-                  ratingCount={b.ratingCount}
-                  startingPrice={b.startingPrice}
-                />
-              </Reveal>
-            ))}
-          </div>
-        </section>
-      )}
 
       {/* CTA final */}
       <section className="bg-ink py-20">

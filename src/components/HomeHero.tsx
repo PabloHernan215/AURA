@@ -10,7 +10,7 @@ const ROTATING_WORDS = ['Cabello', 'Uñas', 'Cejas y pestañas', 'Bienestar'];
 const ROTATE_MS = 2200;
 
 const BANNER_IMAGES = [
-  { src: '/banner/banner-1.jpg', alt: 'Descubre, reserva y disfruta con AURA' },
+  { src: '/banner/banner-1.jpeg', alt: 'Descubre, reserva y disfruta con AURA' },
   { src: '/banner/banner-3.jpeg', alt: 'AURA Reservas — los mejores profesionales del cuidado personal cerca de ti' },
   { src: '/banner/banner-4.jpeg', alt: 'AURA — locales verificados con los mejores profesionales del cuidado personal' },
 ];

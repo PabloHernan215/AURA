@@ -26,14 +26,13 @@ export default function ImageCarousel({ images, intervalMs = 5000 }: ImageCarous
 
   return (
     <div
-      className="relative mx-auto mt-4 aspect-video w-full max-w-6xl overflow-hidden rounded-2xl bg-sand"
+      className="relative mx-auto mt-4 aspect-[9/16] w-full max-w-xs overflow-hidden rounded-2xl bg-sand sm:max-w-sm"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
       {images.map((img, i) => (
-        // Contain (not cover) so banners never get cropped on narrow
-        // screens — any image that isn't exactly 16:9 just letterboxes
-        // instead of losing its edges.
+        // Contain (not cover) so banners never get cropped — any image that
+        // isn't exactly 9:16 just letterboxes instead of losing its edges.
         // eslint-disable-next-line @next/next/no-img-element
         <img
           key={img.src}
